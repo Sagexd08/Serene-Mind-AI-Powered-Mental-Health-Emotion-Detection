@@ -8,15 +8,9 @@ import { getRefreshToken } from "../services/auth.service";
 //
 // LOAD RSA KEYS
 //
-const privateKey = fs.readFileSync(
-  path.join(process.cwd(), "keys", "private.key"),
-  "utf8"
-);
+const privateKey = fs.readFileSync(path.join(process.cwd(), "keys", "private.key"), "utf8");
 
-const publicKey = fs.readFileSync(
-  path.join(process.cwd(), "keys", "public.key"),
-  "utf8"
-);
+const publicKey = fs.readFileSync(path.join(process.cwd(), "keys", "public.key"), "utf8");
 
 //
 // TOKEN LIFETIMES
@@ -29,6 +23,7 @@ const REFRESH_TOKEN_EXP_DAYS = 14; // Because refresh is opaque (DB stored)
 //
 export interface JWTPayload {
   sub: string; // user ID
+  uuid: string; // user UUID
   jti: string; // unique token ID
   iat?: number;
   exp?: number;
@@ -42,6 +37,7 @@ export const generateAccessToken = (UUID: string): string => {
 
   const payload: JWTPayload = {
     sub: UUID,
+    uuid: UUID,
     jti,
   };
 
@@ -83,10 +79,22 @@ export const generateRefreshToken = (): {
 // REFRESH TOKEN VERIFICATION
 // (MUST BE MATCHED AGAINST DB/REDIS)
 //
-export const verifyRefreshToken = async (token: string) => {
-  const record = await getRefreshToken(token);
+export const verifyRefreshToken = async (token: string): Promise<{ valid: boolean; userId?: string }> => {
+  try {
+    const record = await getRefreshToken(token);
 
-  if (!record) throw new Error("Invalid or expired refresh token");
+    if (!record) {
+      return { valid: false };
+    }
 
-  return record.userId;
+    // Check if token is expired
+    const expiresAt = new Date(record.expires_at);
+    if (expiresAt < new Date()) {
+      return { valid: false };
+    }
+
+    return { valid: true, userId: record.user_id };
+  } catch (error) {
+    return { valid: false };
+  }
 };

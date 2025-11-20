@@ -13,6 +13,5 @@ export const requestQueue = new Queue('request-processing', {
 export interface RequestJob {
   encryptedData: string;
   userId: string;
-  userPass: string;
   targetUrl: string;
 }

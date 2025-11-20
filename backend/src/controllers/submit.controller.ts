@@ -2,17 +2,12 @@ import { Response } from "express";
 import { requestQueue } from "../config/queue.js";
 import { AuthRequest } from "../middlewares/auth.middleware.js";
 
-export const getSubmit = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const getSubmit = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { encryptedData, targetUrl } = req.body;
 
     if (!encryptedData || !targetUrl) {
-      res
-        .status(400)
-        .json({ error: "encryptedData and targetUrl are required" });
+      res.status(400).json({ error: "encryptedData and targetUrl are required" });
       return;
     }
 
@@ -23,8 +18,7 @@ export const getSubmit = async (
 
     const job = await requestQueue.add({
       encryptedData,
-      userId: req.user.userId,
-      userPass: req.user.userPass,
+      userId: req.user.uuid,
       targetUrl,
     });
 

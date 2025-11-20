@@ -11,10 +11,12 @@ import {
   verifyUserCredentials,
   invalidateRefreshToken,
   findUserByRefreshToken,
-  getUserByUuid
+  getUserByUuid,
+  registerUser,
 } from "../services/auth.service.js";
 
 import type { user as userType } from "../types/auth.types.js";
+import { AuthRequest } from "../middlewares/auth.middleware.js";
 
 // LOGIN
 async function getLogin(req: Request, res: Response): Promise<void> {
@@ -36,13 +38,19 @@ async function getLogin(req: Request, res: Response): Promise<void> {
     const accessToken = generateAccessToken(user.uuid);
     const { token: refreshToken, expiresAt } = generateRefreshToken();
 
-    await saveRefreshToken(refreshToken, user.id, expiresAt);
+    await saveRefreshToken(refreshToken, user.userId, expiresAt);
 
     res.status(200).json({
       accessToken,
       refreshToken,
+      user: {
+        uuid: user.uuid,
+        userId: user.userId,
+        email: user.email,
+      },
     });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ error: "Failed to login" });
   }
 }
@@ -50,16 +58,50 @@ async function getLogin(req: Request, res: Response): Promise<void> {
 // REGISTER
 async function getRegister(req: Request, res: Response): Promise<void> {
   try {
-    const { userId, userPass } = req.body;
+    const { userId, userPass, email } = req.body;
+
     if (!userId || !userPass) {
       res.status(400).json({ error: "userId and userPass are required" });
       return;
     }
 
-    // you add user in DB here
+    // Validate password strength
+    if (userPass.length < 6) {
+      res.status(400).json({ error: "Password must be at least 6 characters long" });
+      return;
+    }
 
-    res.status(201).json({ message: "User registered successfully" });
+    // Validate email format if provided
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      res.status(400).json({ error: "Invalid email format" });
+      return;
+    }
+
+    const user = await registerUser(userId, userPass, email);
+
+    if (!user) {
+      res.status(409).json({ error: "User already exists" });
+      return;
+    }
+
+    // Generate tokens for the new user
+    const accessToken = generateAccessToken(user.uuid);
+    const { token: refreshToken, expiresAt } = generateRefreshToken();
+
+    await saveRefreshToken(refreshToken, user.userId, expiresAt);
+
+    res.status(201).json({
+      message: "User registered successfully",
+      accessToken,
+      refreshToken,
+      user: {
+        uuid: user.uuid,
+        userId: user.userId,
+        email: user.email,
+      },
+    });
   } catch (error) {
+    console.error("Registration error:", error);
     res.status(500).json({ error: "Registration failed" });
   }
 }
@@ -68,26 +110,23 @@ async function getRegister(req: Request, res: Response): Promise<void> {
 async function getRefresh(req: Request, res: Response): Promise<void> {
   try {
     const { refreshToken } = req.body;
+
     if (!refreshToken) {
       res.status(400).json({ error: "refreshToken is required" });
       return;
     }
 
     const verified = await verifyRefreshToken(refreshToken);
+
     if (!verified.valid) {
-      res.status(401).json({ error: "Invalid refresh token" });
+      res.status(401).json({ error: "Invalid or expired refresh token" });
       return;
     }
 
-    const stored = await findUserByRefreshToken(refreshToken);
-    if (!stored) {
-      res.status(401).json({ error: "Refresh token not recognized" });
-      return;
-    }
+    const user = await findUserByRefreshToken(refreshToken);
 
-    const user = await getUserByUuid(stored.uuid);
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(401).json({ error: "Refresh token not recognized" });
       return;
     }
 
@@ -95,6 +134,7 @@ async function getRefresh(req: Request, res: Response): Promise<void> {
 
     res.status(200).json({ accessToken });
   } catch (error) {
+    console.error("Refresh token error:", error);
     res.status(500).json({ error: "Failed to refresh token" });
   }
 }
@@ -113,28 +153,21 @@ async function getLogout(req: Request, res: Response): Promise<void> {
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
+    console.error("Logout error:", error);
     res.status(500).json({ error: "Logout failed" });
   }
 }
 
-// ME (requires auth middleware)
-async function getMe(req: Request, res: Response): Promise<void> {
+// ME (uses auth middleware)
+async function getMe(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!req.user || !req.user.uuid) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
-    const token = authHeader.split(" ")[1];
-    const decoded = verifyAccessToken(token);
+    const user = await getUserByUuid(req.user.uuid);
 
-    if (!decoded.valid || !decoded.uuid) {
-      res.status(401).json({ error: "Invalid access token" });
-      return;
-    }
-
-    const user = await getUserByUuid(decoded.uuid);
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -146,16 +179,9 @@ async function getMe(req: Request, res: Response): Promise<void> {
       email: user.email,
     });
   } catch (error) {
+    console.error("Get user info error:", error);
     res.status(500).json({ error: "Failed to get user info" });
   }
 }
 
-
-
-export {
-  getLogin,
-  getRegister,
-  getRefresh,
-  getLogout,
-  getMe,
-};
+export { getLogin, getRegister, getRefresh, getLogout, getMe };
