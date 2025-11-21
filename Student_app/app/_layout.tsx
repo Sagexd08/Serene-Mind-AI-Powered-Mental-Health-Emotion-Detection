@@ -1,4 +1,8 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
@@ -23,7 +27,7 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="(tabs)"
+          name="home"
           options={{
             headerShown: false,
             gestureEnabled: false,

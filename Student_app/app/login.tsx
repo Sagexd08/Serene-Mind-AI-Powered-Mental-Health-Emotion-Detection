@@ -1,34 +1,47 @@
+import apiService from "@/services/api";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import apiService from "@/services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [studentID, setStudentID] = useState("");
-  const [password, setPassword] = useState("");
+  const [userId, setUserId] = useState("");
+  const [userPass, setUserPass] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    // Validation
-    if (!studentID.trim()) {
-      Alert.alert("Error", "Please enter your Student ID");
-      return;
-    }
+    // Bypass mode - no validation required, accept any input
+    if (!userId.trim() || !userPass.trim()) {
+      // Even if empty, allow login in bypass mode
+      const id = userId.trim() || "guest";
+      const pass = userPass.trim() || "pass";
 
-    if (!password.trim()) {
-      Alert.alert("Error", "Please enter your password");
+      setLoading(true);
+      try {
+        await apiService.login({
+          userId: id,
+          userPass: pass,
+        });
+        router.replace("/home");
+      } catch (error: any) {
+        Alert.alert(
+          "Login Error",
+          error.message || "An error occurred during login"
+        );
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -37,22 +50,31 @@ export default function LoginScreen() {
     try {
       // Call API login
       await apiService.login({
-        studentID: studentID.trim(),
-        password: password.trim(),
+        userId: userId.trim(),
+        userPass: userPass.trim(),
       });
 
       // Navigate to home screen on successful login
-      router.replace("/(tabs)");
+      router.replace("/home");
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message || "An error occurred during login");
+      Alert.alert(
+        "Login Error",
+        error.message || "An error occurred during login"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.content}>
           {/* Logo/Title Section */}
           <View style={styles.headerSection}>
@@ -63,13 +85,13 @@ export default function LoginScreen() {
           {/* Login Form */}
           <View style={styles.formSection}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Student ID</Text>
+              <Text style={styles.label}>User ID</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your student ID"
+                placeholder="Enter your user ID"
                 placeholderTextColor="#999"
-                value={studentID}
-                onChangeText={setStudentID}
+                value={userId}
+                onChangeText={setUserId}
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!loading}
@@ -82,8 +104,8 @@ export default function LoginScreen() {
                 style={styles.input}
                 placeholder="Enter your password"
                 placeholderTextColor="#999"
-                value={password}
-                onChangeText={setPassword}
+                value={userPass}
+                onChangeText={setUserPass}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -93,7 +115,10 @@ export default function LoginScreen() {
 
             {/* Login Button */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              style={[
+                styles.loginButton,
+                loading && styles.loginButtonDisabled,
+              ]}
               onPress={handleLogin}
               disabled={loading}
             >

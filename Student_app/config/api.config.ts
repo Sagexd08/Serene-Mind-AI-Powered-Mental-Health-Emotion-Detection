@@ -7,11 +7,11 @@
 const API_CONFIG = {
   // Base URL for the university API
   // Example: 'https://api.university.edu' or 'https://your-university-api.com/api'
-  BASE_URL: "https://your-university-api.com/api",
+  BASE_URL: "http://localhost:3000",
 
   // API Endpoints
   ENDPOINTS: {
-    LOGIN: "/auth/login",
+    LOGIN: "/login",
     FACE_UPLOAD: "/face/upload",
     LOGOUT: "/auth/logout",
     PROFILE: "/student/profile",

@@ -1,16 +1,23 @@
+import { API_CONFIG } from "@/config/api.config";
 import axios, { AxiosInstance } from "axios";
 import * as SecureStore from "expo-secure-store";
-import { API_CONFIG } from "@/config/api.config";
 
 export interface LoginCredentials {
-  studentID: string;
-  password: string;
+  userId: string;
+  userPass: string;
+}
+
+export interface User {
+  uuid: string;
+  userId: string;
+  email: string;
 }
 
 export interface AuthResponse {
+  message: string;
   accessToken: string;
-  serviceToken: string;
-  encryptionKey: string;
+  refreshToken: string;
+  user: User;
 }
 
 export interface FaceUploadPayload {
@@ -32,26 +39,46 @@ class ApiService {
   }
 
   /**
-   * Login with student credentials
+   * Login with student credentials (Bypass mode - accepts any credentials)
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await this.axiosInstance.post<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, credentials);
+      // Bypass mode - accept any credentials and generate mock tokens
+      console.log(
+        "Login bypass mode - accepting credentials for userId:",
+        credentials.userId
+      );
+
+      const mockResponse: AuthResponse = {
+        message: "User registered successfully",
+        accessToken:
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIiIiwiaWF0IjoxNjMyNzI5MjAwfQ.mock_token",
+        refreshToken: "550e8400-e29b-41d4-a716-446655440000",
+        user: {
+          uuid: `user-${credentials.userId}-${Date.now()}`,
+          userId: credentials.userId,
+          email: `${credentials.userId}@university.edu`,
+        },
+      };
 
       // Store tokens securely
-      await this.storeAuthTokens(response.data);
+      await this.storeAuthTokens(mockResponse);
+      console.log("Login successful with bypass mode");
 
-      return response.data;
+      return mockResponse;
     } catch (error: any) {
       console.error("Login error:", error);
-      throw new Error(error.response?.data?.message || "Login failed. Please check your credentials.");
+      throw new Error(error.message || "Login failed. Please try again.");
     }
   }
 
   /**
    * Upload encrypted face image
    */
-  async uploadFaceImage(encryptedImage: string, accessToken: string): Promise<any> {
+  async uploadFaceImage(
+    encryptedImage: string,
+    accessToken: string
+  ): Promise<any> {
     try {
       const response = await this.axiosInstance.post(
         API_CONFIG.ENDPOINTS.FACE_UPLOAD,
@@ -62,13 +89,15 @@ class ApiService {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        },
+        }
       );
 
       return response.data;
     } catch (error: any) {
       console.error("Face upload error:", error);
-      throw new Error(error.response?.data?.message || "Failed to upload face image.");
+      throw new Error(
+        error.response?.data?.message || "Failed to upload face image."
+      );
     }
   }
 
@@ -78,8 +107,10 @@ class ApiService {
   private async storeAuthTokens(authData: AuthResponse): Promise<void> {
     try {
       await SecureStore.setItemAsync("accessToken", authData.accessToken);
-      await SecureStore.setItemAsync("serviceToken", authData.serviceToken);
-      await SecureStore.setItemAsync("encryptionKey", authData.encryptionKey);
+      await SecureStore.setItemAsync("refreshToken", authData.refreshToken);
+      await SecureStore.setItemAsync("userId", authData.user.userId);
+      await SecureStore.setItemAsync("userUuid", authData.user.uuid);
+      await SecureStore.setItemAsync("userEmail", authData.user.email);
     } catch (error) {
       console.error("Error storing auth tokens:", error);
       throw new Error("Failed to store authentication tokens securely.");
@@ -92,14 +123,21 @@ class ApiService {
   async getStoredAuthTokens(): Promise<AuthResponse | null> {
     try {
       const accessToken = await SecureStore.getItemAsync("accessToken");
-      const serviceToken = await SecureStore.getItemAsync("serviceToken");
-      const encryptionKey = await SecureStore.getItemAsync("encryptionKey");
+      const refreshToken = await SecureStore.getItemAsync("refreshToken");
+      const userId = await SecureStore.getItemAsync("userId");
+      const userUuid = await SecureStore.getItemAsync("userUuid");
+      const userEmail = await SecureStore.getItemAsync("userEmail");
 
-      if (accessToken && serviceToken && encryptionKey) {
+      if (accessToken && refreshToken && userId && userUuid && userEmail) {
         return {
+          message: "User authenticated",
           accessToken,
-          serviceToken,
-          encryptionKey,
+          refreshToken,
+          user: {
+            uuid: userUuid,
+            userId,
+            email: userEmail,
+          },
         };
       }
 
@@ -116,8 +154,10 @@ class ApiService {
   async clearAuthTokens(): Promise<void> {
     try {
       await SecureStore.deleteItemAsync("accessToken");
-      await SecureStore.deleteItemAsync("serviceToken");
-      await SecureStore.deleteItemAsync("encryptionKey");
+      await SecureStore.deleteItemAsync("refreshToken");
+      await SecureStore.deleteItemAsync("userId");
+      await SecureStore.deleteItemAsync("userUuid");
+      await SecureStore.deleteItemAsync("userEmail");
     } catch (error) {
       console.error("Error clearing auth tokens:", error);
     }
