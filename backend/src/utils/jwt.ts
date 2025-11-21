@@ -3,14 +3,19 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-import { getRefreshToken } from "../services/auth.service";
+import { getRefreshToken } from "../services/auth.service.js";
+import { fileURLToPath } from "url";
 
 //
 // LOAD RSA KEYS
 //
-const privateKey = fs.readFileSync(path.join(process.cwd(), "keys", "private.key"), "utf8");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const publicKey = fs.readFileSync(path.join(process.cwd(), "keys", "public.key"), "utf8");
+const keysDir = path.join(__dirname, "../keys");
+
+const privateKey = fs.readFileSync(path.join(keysDir, "private.key"), "utf8");
+const publicKey = fs.readFileSync(path.join(keysDir, "public.key"), "utf8");
 
 //
 // TOKEN LIFETIMES
@@ -79,7 +84,9 @@ export const generateRefreshToken = (): {
 // REFRESH TOKEN VERIFICATION
 // (MUST BE MATCHED AGAINST DB/REDIS)
 //
-export const verifyRefreshToken = async (token: string): Promise<{ valid: boolean; userId?: string }> => {
+export const verifyRefreshToken = async (
+  token: string
+): Promise<{ valid: boolean; userId?: string }> => {
   try {
     const record = await getRefreshToken(token);
 

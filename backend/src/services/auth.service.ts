@@ -17,20 +17,32 @@ mockUsers.set("123e4567-e89b-12d3-a456-426614174000", {
 });
 
 // 1) Verify User Credentials
-async function verifyUserCredentials(userId: string, userPass: string): Promise<user | null> {
+async function verifyUserCredentials(
+  userId: string,
+  userPass: string
+): Promise<user | null> {
   try {
     const db = await connectToDB();
 
     let result;
     if (db.driver === "postgres") {
-      result = await db.query("SELECT * FROM users WHERE username = $1", [userId]);
+      result = await db.query("SELECT * FROM users WHERE username = $1", [
+        userId,
+      ]);
     } else if (db.driver === "sqlite") {
       result = db.query("SELECT * FROM users WHERE username = ?", [userId]);
     }
 
-    if (!result || (Array.isArray(result.rows) ? result.rows.length === 0 : result.length === 0)) {
+    if (
+      !result ||
+      (Array.isArray(result.rows)
+        ? result.rows.length === 0
+        : result.length === 0)
+    ) {
       // Fallback to mock users
-      const user = Array.from(mockUsers.values()).find((u) => u.userId === userId);
+      const user = Array.from(mockUsers.values()).find(
+        (u) => u.userId === userId
+      );
 
       if (!user) return null;
 
@@ -42,7 +54,10 @@ async function verifyUserCredentials(userId: string, userPass: string): Promise<
     const userData = Array.isArray(result.rows) ? result.rows[0] : result[0];
 
     // Compare password with hashed password
-    const isPasswordValid = await comparePassword(userPass, userData.password_hash || userData.password);
+    const isPasswordValid = await comparePassword(
+      userPass,
+      userData.password_hash || userData.password
+    );
 
     if (!isPasswordValid) {
       return null;
@@ -62,7 +77,9 @@ async function verifyUserCredentials(userId: string, userPass: string): Promise<
     console.error("Error verifying user credentials:", error);
 
     // Fallback to mock users
-    const user = Array.from(mockUsers.values()).find((u) => u.userId === userId);
+    const user = Array.from(mockUsers.values()).find(
+      (u) => u.userId === userId
+    );
 
     if (!user) return null;
 
@@ -72,21 +89,30 @@ async function verifyUserCredentials(userId: string, userPass: string): Promise<
 }
 
 // 2) Register New User
-async function registerUser(userId: string, userPass: string, email?: string): Promise<user | null> {
+async function registerUser(
+  userId: string,
+  userPass: string
+): Promise<user | null> {
   try {
     const db = await connectToDB();
 
     // Check if user already exists
     let existingUser;
     if (db.driver === "postgres") {
-      existingUser = await db.query("SELECT * FROM users WHERE username = $1", [userId]);
+      existingUser = await db.query("SELECT * FROM users WHERE username = $1", [
+        userId,
+      ]);
     } else if (db.driver === "sqlite") {
-      existingUser = db.query("SELECT * FROM users WHERE username = ?", [userId]);
+      existingUser = db.query("SELECT * FROM users WHERE username = ?", [
+        userId,
+      ]);
     }
 
     if (
       existingUser &&
-      (Array.isArray(existingUser.rows) ? existingUser.rows.length > 0 : existingUser.length > 0)
+      (Array.isArray(existingUser.rows)
+        ? existingUser.rows.length > 0
+        : existingUser.length > 0)
     ) {
       return null; // User already exists
     }
@@ -97,19 +123,15 @@ async function registerUser(userId: string, userPass: string, email?: string): P
 
     // Insert new user
     if (db.driver === "postgres") {
-      await db.query("INSERT INTO users (uuid, username, password_hash, email) VALUES ($1, $2, $3, $4)", [
-        uuid,
-        userId,
-        hashedPassword,
-        email || null,
-      ]);
+      await db.query(
+        "INSERT INTO users (uuid, username, password_hash) VALUES ($1, $2, $3)",
+        [uuid, userId, hashedPassword]
+      );
     } else if (db.driver === "sqlite") {
-      db.run("INSERT INTO users (uuid, username, password_hash, email) VALUES (?, ?, ?, ?)", [
-        uuid,
-        userId,
-        hashedPassword,
-        email || null,
-      ]);
+      db.run(
+        "INSERT INTO users (uuid, username, password_hash) VALUES (?, ?, ?)",
+        [uuid, userId, hashedPassword]
+      );
     }
 
     const newUser: user = {
@@ -117,68 +139,64 @@ async function registerUser(userId: string, userPass: string, email?: string): P
       id: userId,
       userId,
       password: hashedPassword,
-      email,
       createdAt: new Date(),
     };
 
     return newUser;
   } catch (error) {
     console.error("Error registering user:", error);
-
-    // Fallback to mock users for development
-    const uuid = crypto.randomUUID();
-    const hashedPassword = await hashPassword(userPass);
-
-    const newUser: user = {
-      uuid,
-      id: userId,
-      userId,
-      password: hashedPassword,
-      email,
-      createdAt: new Date(),
-    };
-
-    mockUsers.set(uuid, newUser);
-    return newUser;
+    return null;
   }
 }
 
 // 3) Save Refresh Token
-async function saveRefreshToken(token: string, userId: string, expiresAt: Date): Promise<void> {
+async function saveRefreshToken(
+  token: string,
+  userId: string,
+  expiresAt: Date
+): Promise<void> {
   try {
     const db = await connectToDB();
 
     // First, get user UUID from userId
     let userResult;
     if (db.driver === "postgres") {
-      userResult = await db.query("SELECT uuid FROM users WHERE username = $1", [userId]);
+      userResult = await db.query(
+        "SELECT uuid FROM users WHERE username = $1",
+        [userId]
+      );
     } else if (db.driver === "sqlite") {
-      userResult = db.query("SELECT uuid FROM users WHERE username = ?", [userId]);
+      userResult = db.query("SELECT uuid FROM users WHERE username = ?", [
+        userId,
+      ]);
     }
 
     if (
       !userResult ||
-      (Array.isArray(userResult.rows) ? userResult.rows.length === 0 : userResult.length === 0)
+      (Array.isArray(userResult.rows)
+        ? userResult.rows.length === 0
+        : userResult.length === 0)
     ) {
       // Fallback to in-memory storage
       refreshTokens.set(token, { userId, expiresAt });
       return;
     }
 
-    const userUuid = Array.isArray(userResult.rows) ? userResult.rows[0].uuid : userResult[0].uuid;
+    const userUuid = Array.isArray(userResult.rows)
+      ? userResult.rows[0].uuid
+      : userResult[0].uuid;
 
     // Save refresh token
     if (db.driver === "postgres") {
       await db.query(
         "INSERT INTO refresh_tokens (token, user_uuid, expires_at) VALUES ($1, $2, $3) ON CONFLICT (token) DO UPDATE SET expires_at = $3",
-        [token, userUuid, expiresAt],
+        [token, userUuid, expiresAt]
       );
     } else if (db.driver === "sqlite") {
-      db.run("INSERT OR REPLACE INTO refresh_tokens (token, user_uuid, expires_at) VALUES (?, ?, ?)", [
-        token,
-        userUuid,
-        expiresAt.toISOString(),
-      ]);
+      db.run(
+        "INSERT OR REPLACE INTO refresh_tokens (token, user_uuid, expires_at) VALUES (?, ?, ?)",
+        [token, userUuid, expiresAt.toISOString()]
+      );
     }
   } catch (error) {
     console.error("Error saving refresh token:", error);
@@ -215,23 +233,30 @@ async function findUserByRefreshToken(token: string): Promise<user | null> {
         `SELECT u.* FROM users u
          INNER JOIN refresh_tokens rt ON u.uuid = rt.user_uuid
          WHERE rt.token = $1 AND rt.expires_at > NOW()`,
-        [token],
+        [token]
       );
     } else if (db.driver === "sqlite") {
       result = db.query(
         `SELECT u.* FROM users u
          INNER JOIN refresh_tokens rt ON u.uuid = rt.user_uuid
          WHERE rt.token = ? AND rt.expires_at > datetime('now')`,
-        [token],
+        [token]
       );
     }
 
-    if (!result || (Array.isArray(result.rows) ? result.rows.length === 0 : result.length === 0)) {
+    if (
+      !result ||
+      (Array.isArray(result.rows)
+        ? result.rows.length === 0
+        : result.length === 0)
+    ) {
       // Fallback to in-memory storage
       const entry = refreshTokens.get(token);
       if (!entry || entry.expiresAt < new Date()) return null;
 
-      const user = Array.from(mockUsers.values()).find((u) => u.userId === entry.userId);
+      const user = Array.from(mockUsers.values()).find(
+        (u) => u.userId === entry.userId
+      );
       return user || null;
     }
 
@@ -253,7 +278,9 @@ async function findUserByRefreshToken(token: string): Promise<user | null> {
     const entry = refreshTokens.get(token);
     if (!entry || entry.expiresAt < new Date()) return null;
 
-    const user = Array.from(mockUsers.values()).find((u) => u.userId === entry.userId);
+    const user = Array.from(mockUsers.values()).find(
+      (u) => u.userId === entry.userId
+    );
     return user || null;
   }
 }
@@ -270,7 +297,12 @@ async function getUserByUuid(uuid: string): Promise<user | null> {
       result = db.query("SELECT * FROM users WHERE uuid = ?", [uuid]);
     }
 
-    if (!result || (Array.isArray(result.rows) ? result.rows.length === 0 : result.length === 0)) {
+    if (
+      !result ||
+      (Array.isArray(result.rows)
+        ? result.rows.length === 0
+        : result.length === 0)
+    ) {
       // Fallback to mock users
       return mockUsers.get(uuid) || null;
     }
@@ -305,15 +337,21 @@ async function getRefreshToken(token: string): Promise<{
     if (db.driver === "postgres") {
       result = await db.query(
         "SELECT user_uuid as user_id, expires_at FROM refresh_tokens WHERE token = $1",
-        [token],
+        [token]
       );
     } else if (db.driver === "sqlite") {
-      result = db.query("SELECT user_uuid as user_id, expires_at FROM refresh_tokens WHERE token = ?", [
-        token,
-      ]);
+      result = db.query(
+        "SELECT user_uuid as user_id, expires_at FROM refresh_tokens WHERE token = ?",
+        [token]
+      );
     }
 
-    if (!result || (Array.isArray(result.rows) ? result.rows.length === 0 : result.length === 0)) {
+    if (
+      !result ||
+      (Array.isArray(result.rows)
+        ? result.rows.length === 0
+        : result.length === 0)
+    ) {
       // Fallback to in-memory storage
       const entry = refreshTokens.get(token);
       if (!entry) return null;

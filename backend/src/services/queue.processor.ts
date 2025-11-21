@@ -1,9 +1,9 @@
-import { requestQueue, RequestJob } from '../config/queue.js';
-import { decrypt } from '../utils/crypto.js';
-import axios from 'axios';
+import { requestQueue, RequestJob } from "../config/queue.js";
+import { decrypt } from "../utils/crypto.js";
+import axios from "axios";
 
 export const processRequestJob = async (job: any): Promise<void> => {
-  const { encryptedData, userId, userPass, targetUrl } = job.data as RequestJob;
+  const { encryptedData, userId, targetUrl } = job.data as RequestJob;
 
   try {
     const decryptedData = decrypt(encryptedData);
@@ -11,7 +11,6 @@ export const processRequestJob = async (job: any): Promise<void> => {
     await axios.post(targetUrl, {
       data: decryptedData,
       userId,
-      userPass,
     });
 
     console.log(`Job ${job.id} processed successfully`);
@@ -26,11 +25,11 @@ export const initializeQueueProcessor = (): void => {
     await processRequestJob(job);
   });
 
-  requestQueue.on('completed', (job) => {
+  requestQueue.on("completed", (job) => {
     console.log(`Job ${job.id} completed`);
   });
 
-  requestQueue.on('failed', (job, err) => {
+  requestQueue.on("failed", (job, err) => {
     console.log(`Job ${job.id} failed with error: ${err.message}`);
   });
 };

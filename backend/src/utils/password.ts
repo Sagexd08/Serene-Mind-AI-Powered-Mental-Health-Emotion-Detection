@@ -1,14 +1,16 @@
 import bcrypt from "bcrypt";
 
-const SALT_ROUNDS = 10;
 
 /**
  * Hash a plain text password
  * @param password - Plain text password
  * @returns Hashed password
  */
-export async function hashPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password, SALT_ROUNDS);
+export async function hashPassword(
+  password: string,
+  salt: number = 10
+): Promise<string> {
+  return await bcrypt.hash(password, salt);
 }
 
 /**

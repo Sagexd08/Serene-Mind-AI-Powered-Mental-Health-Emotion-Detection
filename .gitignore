@@ -5,3 +5,8 @@ facialdata
 node_modules
 dist
 build
+
+.env
+*.sqlite
+
+keys/

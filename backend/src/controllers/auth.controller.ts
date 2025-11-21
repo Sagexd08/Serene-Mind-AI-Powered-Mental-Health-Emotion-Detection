@@ -58,26 +58,13 @@ async function getLogin(req: Request, res: Response): Promise<void> {
 // REGISTER
 async function getRegister(req: Request, res: Response): Promise<void> {
   try {
-    const { userId, userPass, email } = req.body;
+    const { userId, userPass } = req.body;
 
     if (!userId || !userPass) {
       res.status(400).json({ error: "userId and userPass are required" });
       return;
     }
-
-    // Validate password strength
-    if (userPass.length < 6) {
-      res.status(400).json({ error: "Password must be at least 6 characters long" });
-      return;
-    }
-
-    // Validate email format if provided
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json({ error: "Invalid email format" });
-      return;
-    }
-
-    const user = await registerUser(userId, userPass, email);
+    const user = await registerUser(userId, userPass);
 
     if (!user) {
       res.status(409).json({ error: "User already exists" });
