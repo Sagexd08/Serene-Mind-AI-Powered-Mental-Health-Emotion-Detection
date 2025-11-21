@@ -9,4 +9,7 @@ build
 .env
 *.sqlite
 
-keys/
+private.key
+public.key
+
+.vscode/
