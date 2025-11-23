@@ -13,3 +13,5 @@ private.key
 public.key
 
 .vscode/
+
+.ipynb_checkpoints
