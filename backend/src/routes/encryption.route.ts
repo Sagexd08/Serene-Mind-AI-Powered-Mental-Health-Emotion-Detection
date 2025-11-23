@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { getSubmit } from "../controllers/submit.controller.js";
+import { getEncrytion } from "../controllers/encrytion.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.post("/", authMiddleware, getSubmit);
+router.post("/", authMiddleware, getEncrytion);
 
 export default router;

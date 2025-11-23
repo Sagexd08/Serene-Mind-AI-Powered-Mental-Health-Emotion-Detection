@@ -1,24 +1,30 @@
-import { Request, Response } from "express";
-import { generateEncrytionDecrytionKeys } from "../utils/crypto";
+import { Response } from "express";
+import { AuthRequest } from "../middlewares/auth.middleware.js";
+import { generateEncrytionDecrytionKeys } from "../utils/crypto.js";
+import { submitDecryptionRequest } from "../services/encrytion.service.js";
 
 export const getEncrytion = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
-    const { userId } = req.body;
-
-    if (!userId) {
-      res.status(400).json({ error: "UserId is required" });
+    if (!req.user || !req.user.uuid) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
+    const userId = req.user.uuid;
+
     const { encryptionKey, decryptionKey } = generateEncrytionDecrytionKeys({});
 
-    res.status(202).json({
+    await submitDecryptionRequest(decryptionKey, userId);
+
+    res.status(200).json({
       encryptionKey: encryptionKey,
+      message: "Encryption key generated successfully",
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to queue request" });
+    console.error("Encryption error:", error);
+    res.status(500).json({ error: "Failed to generate encryption key" });
   }
 };

@@ -1,7 +1,9 @@
+import dotenv from "dotenv";
+dotenv.config();
 
 import { initializeDatabase, seedDatabase } from "../db/init.js";
 
-export async function setup_database() {
+async function setup_database() {
   try {
     console.log("=== Database Setup ===\n");
 
@@ -21,3 +23,6 @@ export async function setup_database() {
     process.exit(1);
   }
 }
+
+// Call the setup function
+setup_database();

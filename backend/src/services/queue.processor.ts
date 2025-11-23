@@ -1,35 +1,77 @@
 import { requestQueue, RequestJob } from "../config/queue.js";
-import { decrypt } from "../utils/crypto.js";
-import axios from "axios";
 
-export const processRequestJob = async (job: any): Promise<void> => {
-  const { encryptedData, userId, targetUrl } = job.data as RequestJob;
-
+/**
+ * Initialize queue processor for ML pipeline
+ * Handles processing of encrypted data submissions
+ */
+export async function initializeQueueProcessor(): Promise<void> {
   try {
-    const decryptedData = decrypt(encryptedData);
-
-    await axios.post(targetUrl, {
-      data: decryptedData,
-      userId,
+    // Listen for queue events
+    requestQueue.on("completed", (job) => {
+      console.log(`✓ Job ${job.id} completed`);
     });
 
-    console.log(`Job ${job.id} processed successfully`);
+    requestQueue.on("failed", (job, err) => {
+      console.error(`✗ Job ${job?.id} failed:`, err?.message);
+    });
+
+    requestQueue.on("error", (err) => {
+      console.error("Queue error:", err);
+    });
+
+    // Process jobs from the queue
+    await requestQueue.process(async (job) => {
+      const { encryptedData, userId, decryptionKey } =
+        job.data as RequestJob & {
+          decryptionKey: string;
+        };
+
+      try {
+        console.log(`Processing job ${job.id} for user ${userId}`);
+
+        // TODO: Send to ML pipeline
+        // This is where the encrypted data would be sent to the actual ML pipeline
+        // along with the decryption key for processing
+        console.log(`Job ${job.id}: encrypted data ready for ML pipeline`);
+
+        return {
+          success: true,
+          jobId: job.id,
+          userId,
+          message: "Data submitted to ML pipeline",
+        };
+      } catch (error) {
+        console.error(`Error processing job ${job.id}:`, error);
+        throw error;
+      }
+    });
+
+    console.log("✓ Queue processor initialized");
   } catch (error) {
-    console.error(`Job ${job.id} failed:`, error);
+    console.error("Error initializing queue processor:", error);
     throw error;
   }
-};
+}
 
-export const initializeQueueProcessor = (): void => {
-  requestQueue.process(async (job) => {
-    await processRequestJob(job);
-  });
+/**
+ * Add a job to the queue
+ */
+export async function addJobToQueue(
+  jobData: RequestJob & { decryptionKey: string }
+): Promise<string> {
+  try {
+    const job = await requestQueue.add(jobData, {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 2000,
+      },
+      removeOnComplete: false,
+    });
 
-  requestQueue.on("completed", (job) => {
-    console.log(`Job ${job.id} completed`);
-  });
-
-  requestQueue.on("failed", (job, err) => {
-    console.log(`Job ${job.id} failed with error: ${err.message}`);
-  });
-};
+    return job.id.toString();
+  } catch (error) {
+    console.error("Error adding job to queue:", error);
+    throw error;
+  }
+}

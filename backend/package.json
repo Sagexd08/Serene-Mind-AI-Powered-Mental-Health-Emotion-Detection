@@ -8,6 +8,7 @@
     "start": "node ./dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
     "test": "jest",
+    "test:api": "node test-api.js",
     "lint": "eslint .",
     "setup-db": "node --loader ts-node/esm src/scripts/setup-db.ts"
   },

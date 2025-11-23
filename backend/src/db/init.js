@@ -5,9 +5,9 @@ import path from "path";
 /**
  * Initialize database tables by running SQL schema files
  */
-export async function initializeDatabase(): Promise<void> {
+export async function initializeDatabase() {
   try {
-    const db = connectToDB();
+    const db = await connectToDB();
 
     console.log("Initializing database...");
 
@@ -77,9 +77,9 @@ export async function initializeDatabase(): Promise<void> {
 /**
  * Seed database with sample data for development
  */
-export async function seedDatabase(): Promise<void> {
+export async function seedDatabase() {
   try {
-    const db = connectToDB();
+    const db = await connectToDB();
 
     console.log("Seeding database...");
 
