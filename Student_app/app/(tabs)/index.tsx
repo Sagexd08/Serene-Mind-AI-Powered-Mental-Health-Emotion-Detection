@@ -50,14 +50,17 @@ export default function HomeScreen() {
     setUploading(true);
 
     try {
-      // Get encryption key from stored tokens
+      // Get authentication tokens
       const tokens = await apiService.getStoredAuthTokens();
       if (!tokens) {
         throw new Error("Authentication tokens not found. Please login again.");
       }
 
+      // Use userId as encryption key (derived from tokens)
+      const encryptionKey = tokens.user.userId;
+
       // Encrypt the face image
-      const encryptedFace = encryptionService.encryptImage(faceBase64, tokens.encryptionKey);
+      const encryptedFace = encryptionService.encryptImage(faceBase64, encryptionKey);
 
       // Upload encrypted face to server
       await apiService.uploadFaceImage(encryptedFace, tokens.accessToken);

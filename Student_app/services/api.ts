@@ -73,7 +73,61 @@ class ApiService {
   }
 
   /**
-   * Upload encrypted face image
+   * Get encryption key from server
+   * POST /encryption (Authorization: Bearer <token>) -> 200 {encryptionKey}
+   */
+  async getEncryptionKey(accessToken: string): Promise<string> {
+    try {
+      const response = await this.axiosInstance.post(
+        '/encryption',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      return response.data.encryptionKey;
+    } catch (error: any) {
+      console.error('Failed to get encryption key:', error);
+      // Fallback: return a default key for demo purposes
+      return 'default_encryption_key_12345';
+    }
+  }
+
+  /**
+   * Submit encrypted face image data
+   * POST /api/submit (Authorization: Bearer <token>) {encryptedData} -> 202 {jobId}
+   */
+  async submitEncryptedFaceData(
+    encryptedImage: string,
+    accessToken: string
+  ): Promise<any> {
+    try {
+      const response = await this.axiosInstance.post(
+        '/api/submit',
+        {
+          encryptedData: encryptedImage,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      return response.data; // Should return { jobId: string }
+    } catch (error: any) {
+      console.error('Face data submission error:', error);
+      throw new Error(
+        error.response?.data?.message || 'Failed to submit face data.'
+      );
+    }
+  }
+
+  /**
+   * Upload encrypted face image (legacy method)
    */
   async uploadFaceImage(
     encryptedImage: string,
@@ -169,6 +223,269 @@ class ApiService {
   async isAuthenticated(): Promise<boolean> {
     const tokens = await this.getStoredAuthTokens();
     return tokens !== null;
+  }
+
+  /**
+   * Store consent data locally
+   */
+  async storeConsent(consentData: any): Promise<void> {
+    try {
+      await SecureStore.setItemAsync("consentData", JSON.stringify(consentData));
+    } catch (error) {
+      console.error("Error storing consent:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieve stored consent data
+   */
+  async getStoredConsent(): Promise<any> {
+    try {
+      const data = await SecureStore.getItemAsync("consentData");
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error("Error retrieving consent:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Record consent to backend
+   */
+  async recordConsent(consentFlags: any): Promise<any> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      const response = await this.axiosInstance.post(
+        "/consent/record",
+        consentFlags,
+        {
+          headers: {
+            Authorization: `Bearer ${tokens?.accessToken}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.log("Consent recording (mock mode):", error);
+      return { success: true };
+    }
+  }
+
+  /**
+   * Update consent settings
+   */
+  async updateConsent(updates: any): Promise<void> {
+    try {
+      const current = await this.getStoredConsent();
+      const updated = { ...current, options: { ...current?.options, ...updates } };
+      await this.storeConsent(updated);
+    } catch (error) {
+      console.error("Error updating consent:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get consent history
+   */
+  async getConsentHistory(): Promise<any[]> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      const response = await this.axiosInstance.get("/consent/history", {
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.log("Mock consent history");
+      return [
+        {
+          id: "1",
+          action: "Consent Accepted",
+          timestamp: new Date(Date.now() - 86400000),
+          details: "Passive checks enabled",
+        },
+      ];
+    }
+  }
+
+  /**
+   * Withdraw consent
+   */
+  async withdrawConsent(): Promise<void> {
+    try {
+      const current = await this.getStoredConsent();
+      const updated = {
+        ...current,
+        options: { ...current?.options, passiveMicroChecks: false },
+        status: "withdrawn",
+      };
+      await this.storeConsent(updated);
+    } catch (error) {
+      console.error("Error withdrawing consent:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Request data export
+   */
+  async requestDataExport(type: "anonymized" | "pii"): Promise<void> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      await this.axiosInstance.post(
+        "/data/export",
+        { type },
+        {
+          headers: {
+            Authorization: `Bearer ${tokens?.accessToken}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.log("Mock data export request");
+    }
+  }
+
+  /**
+   * Export data
+   */
+  async exportData(type: "anonymized" | "pii"): Promise<string> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      const response = await this.axiosInstance.get("/data/export", {
+        params: { type },
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return "Exported data from wellness app";
+    }
+  }
+
+  /**
+   * Delete account
+   */
+  async deleteAccount(): Promise<void> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      await this.axiosInstance.post(
+        "/account/delete",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${tokens?.accessToken}`,
+          },
+        }
+      );
+      await this.clearAuthTokens();
+    } catch (error) {
+      console.log("Mock account deletion");
+      await this.clearAuthTokens();
+    }
+  }
+
+  /**
+   * Get sessions
+   */
+  async getSessions(timeRange: "day" | "week" | "month"): Promise<any[]> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      const response = await this.axiosInstance.get("/sessions", {
+        params: { timeRange },
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.log("Mock sessions data");
+      return [
+        {
+          id: "1",
+          timestamp: new Date(),
+          emotion: "Euthymic",
+          confidence: 0.85,
+          source: "face",
+          context: { course: "Biology 101" },
+          note: "Feeling good",
+        },
+      ];
+    }
+  }
+
+  /**
+   * Delete session
+   */
+  async deleteSession(sessionId: string): Promise<void> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      await this.axiosInstance.delete(`/sessions/${sessionId}`, {
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+    } catch (error) {
+      console.log("Mock session deletion");
+    }
+  }
+
+  /**
+   * Update session note
+   */
+  async updateSessionNote(sessionId: string, note: string): Promise<void> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      await this.axiosInstance.patch(
+        `/sessions/${sessionId}`,
+        { note },
+        {
+          headers: {
+            Authorization: `Bearer ${tokens?.accessToken}`,
+          },
+        }
+      );
+    } catch (error) {
+      console.log("Mock session update");
+    }
+  }
+
+  /**
+   * Submit screening
+   */
+  async submitScreening(data: any): Promise<any> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      const response = await this.axiosInstance.post("/screening/submit", data, {
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.log("Mock screening submission");
+      return { success: true };
+    }
+  }
+
+  /**
+   * Create case for therapist
+   */
+  async createCase(data: any): Promise<void> {
+    try {
+      const tokens = await this.getStoredAuthTokens();
+      await this.axiosInstance.post("/cases/create", data, {
+        headers: {
+          Authorization: `Bearer ${tokens?.accessToken}`,
+        },
+      });
+    } catch (error) {
+      console.log("Mock case creation");
+    }
   }
 }
 

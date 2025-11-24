@@ -61,6 +61,42 @@ class EncryptionService {
       throw new Error('Failed to generate image hash');
     }
   }
+
+  /**
+   * Complete encryption workflow with metadata
+   * @param imageBase64 - Base64 encoded image string
+   * @param encryptionKey - Encryption key from server
+   * @returns Object with encrypted data and metadata
+   */
+  encryptFaceDataWithMetadata(
+    imageBase64: string,
+    encryptionKey: string,
+    metadata?: { timestamp?: string; userId?: string }
+  ): string {
+    try {
+      const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      const imageHash = this.generateImageHash(cleanBase64);
+
+      // Create payload with metadata
+      const payload = {
+        image: cleanBase64,
+        hash: imageHash,
+        metadata: {
+          timestamp: metadata?.timestamp || new Date().toISOString(),
+          userId: metadata?.userId || 'anonymous',
+        },
+      };
+
+      // Encrypt the entire payload
+      const payloadString = JSON.stringify(payload);
+      const encrypted = CryptoJS.AES.encrypt(payloadString, encryptionKey);
+
+      return encrypted.toString();
+    } catch (error) {
+      console.error('Payload encryption error:', error);
+      throw new Error('Failed to encrypt face data with metadata');
+    }
+  }
 }
 
 export default new EncryptionService();
