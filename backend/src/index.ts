@@ -9,6 +9,8 @@ import { initializeQueueProcessor } from "./services/queue.processor.js";
 
 const port = process.env.PORT || 3000;
 
+import { initializeDatabase, seedDatabase } from "./db/init.js";
+
 // Initialize queue processor, but don't block server startup if Redis is unavailable
 initializeQueueProcessor().catch((error) => {
   console.error(
@@ -20,6 +22,17 @@ initializeQueueProcessor().catch((error) => {
   );
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
-});
+// Initialize Database and Start Server
+(async () => {
+  try {
+    await initializeDatabase();
+    await seedDatabase();
+
+    app.listen(port, () => {
+      console.log(`Server listening on http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    process.exit(1);
+  }
+})();

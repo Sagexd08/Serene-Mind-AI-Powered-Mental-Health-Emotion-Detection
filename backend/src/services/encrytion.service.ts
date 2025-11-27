@@ -1,4 +1,5 @@
 import { connectToDB } from "../db/connect.js";
+import { grpcClient } from "./grpc.client.js";
 
 export interface DecryptionKeyRecord {
   key: string;
@@ -25,6 +26,21 @@ export async function submitDecryptionRequest(key: string, userId: string) {
         [key, ts, userId]
       );
     }
+
+    // Send to gRPC service
+    await new Promise((resolve, reject) => {
+      grpcClient.SendDecryptionKey({ uid: userId, key: key }, (err: any, response: any) => {
+        if (err) {
+          console.error("gRPC SendDecryptionKey Error:", err);
+          // We might want to throw here if it's critical, or just log it.
+          // Given "submitDecryptionRequest", failure to send to the model worker might be critical.
+          reject(err);
+        } else {
+          console.log("gRPC SendDecryptionKey Response:", response);
+          resolve(response);
+        }
+      });
+    });
   } catch (err) {
     console.error("Failed to submit decryption request:", err);
   }

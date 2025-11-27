@@ -11,11 +11,10 @@ export function generateEncrytionDecrytionKeys({
   size = 32,
   format = "hex",
 }: KeyOptions = {}) {
-  const encryptionKey = crypto.randomBytes(size).toString(format);
-  const decryptionKey = crypto.randomBytes(size).toString(format);
+  const key = crypto.randomBytes(size).toString(format);
 
   return {
-    encryptionKey,
-    decryptionKey,
+    encryptionKey: key,
+    decryptionKey: key,
   };
 }
