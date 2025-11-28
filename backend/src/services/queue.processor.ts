@@ -56,22 +56,3 @@ export async function initializeQueueProcessor(): Promise<void> {
 /**
  * Add a job to the queue
  */
-export async function addJobToQueue(
-  jobData: RequestJob & { decryptionKey: string }
-): Promise<string> {
-  try {
-    const job = await requestQueue.add(jobData, {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 2000,
-      },
-      removeOnComplete: false,
-    });
-
-    return job.id.toString();
-  } catch (error) {
-    console.error("Error adding job to queue:", error);
-    throw error;
-  }
-}

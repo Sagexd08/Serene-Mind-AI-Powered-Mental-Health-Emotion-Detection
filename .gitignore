@@ -15,3 +15,7 @@ public.key
 .vscode/
 
 .ipynb_checkpoints
+
+__pycache__/
+
+*.db
