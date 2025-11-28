@@ -1,23 +1,22 @@
-import { SignJWT, jwtVerify } from 'jose';
-import { UserRole } from '@prisma/client';
+import { SignJWT, jwtVerify } from "jose";
 
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: UserRole;
+  fullName: string;
   iat?: number;
   exp?: number;
 }
 
 const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+  process.env.JWT_SECRET || "fallback-secret-change-in-production"
 );
 
 export async function signToken(payload: JWTPayload): Promise<string> {
   return new SignJWT(payload as any)
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(process.env.JWT_EXPIRES_IN || '7d')
+    .setExpirationTime(process.env.JWT_EXPIRES_IN || "7d")
     .sign(SECRET);
 }
 

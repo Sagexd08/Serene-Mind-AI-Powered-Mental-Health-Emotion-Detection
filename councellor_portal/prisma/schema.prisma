@@ -9,12 +9,6 @@ datasource db {
   // DO NOT add 'url' here in Prisma 7 - it goes in prisma.config.ts
 }
 
-enum UserRole {
-  COUNSELOR
-  SENIOR_COUNSELOR
-  ADMIN
-}
-
 enum RiskLevel {
   MODERATE
   HIGH
@@ -33,14 +27,19 @@ model Counselor {
   email         String   @unique
   passwordHash  String   @map("password_hash")
   fullName      String   @map("full_name")
-  role          UserRole @default(COUNSELOR)
   isActive      Boolean  @default(true) @map("is_active")
+
+  // Workload tracking for auto-assignment
+  currentCaseLoad Int    @default(0) @map("current_case_load")
+  maxCaseLoad     Int    @default(10) @map("max_case_load")
+
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   assignedCases Case[]
   sessionNotes  SessionNote[]
 
+  @@index([isActive, currentCaseLoad])
   @@map("counselors")
 }
 

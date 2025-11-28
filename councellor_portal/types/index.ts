@@ -4,7 +4,6 @@ import {
   SessionNote,
   RiskLevel,
   CaseStatus,
-  UserRole,
 } from "@prisma/client";
 
 export type CaseWithDetails = Case & {
@@ -17,4 +16,4 @@ export type CaseWithDetails = Case & {
   };
 };
 
-export type { RiskLevel, CaseStatus, UserRole, Counselor, Case, SessionNote };
+export type { RiskLevel, CaseStatus, Counselor, Case, SessionNote };
