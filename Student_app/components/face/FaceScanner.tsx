@@ -106,18 +106,14 @@ export default function FaceScanner({ onFaceCaptured, onCancel }: FaceScannerPro
   return (
     <View style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
-        {/* Face Detection Overlay */}
-        <View style={styles.overlay}>
-          <View style={styles.topOverlay} />
-          <View style={styles.middleRow}>
-            <View style={styles.sideOverlay} />
-            <View style={styles.faceFrame}>
-              <Text style={styles.instructionTextInFrame}>Position your face here</Text>
-            </View>
-            <View style={styles.sideOverlay} />
-          </View>
-          <View style={styles.bottomOverlay}>
-            <Text style={styles.instructionText}>Center your face within the frame and capture</Text>
+        {/* Face Detection Overlay - Centered */}
+        <View style={styles.overlayContainer}>
+          {/* Semi-transparent overlay covering entire screen */}
+          <View style={styles.fullOverlay} />
+          
+          {/* Centered face frame cutout */}
+          <View style={styles.centeredFaceFrame}>
+            <View style={styles.faceFrame} />
           </View>
         </View>
 
@@ -159,49 +155,25 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: "transparent",
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
   },
-  topOverlay: {
-    flex: 1,
+  fullOverlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
-  middleRow: {
-    flexDirection: "row",
-    height: screenWidth * 0.8,
-  },
-  sideOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  centeredFaceFrame: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
   },
   faceFrame: {
     width: screenWidth * 0.8,
+    height: screenWidth * 0.8,
     borderWidth: 3,
     borderColor: "#fff",
     borderRadius: screenWidth * 0.4,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  instructionTextInFrame: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  bottomOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingBottom: 120,
-  },
-  instructionText: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-    paddingHorizontal: 20,
+    backgroundColor: "transparent",
   },
   controls: {
     position: "absolute",

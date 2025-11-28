@@ -84,7 +84,7 @@ const i18n = {
 
 // SPEC: Type definitions for API responses
 interface LoginResponse {
-  message: string;
+  message?: string;
   accessToken: string;
   refreshToken: string;
   user: {
@@ -171,17 +171,8 @@ export default function LoginScreen() {
 
   // SPEC: Validation functions per spec requirements
   const validateEmail = (value: string): boolean => {
-    // Email OR college ID pattern
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const collegeIdRegex = /^[A-Z]{2}[0-9]{4,8}$/i;
-    
+    // Allow any non-empty string (removed strict email/ID regex)
     if (!value.trim()) {
-      setErrors(prev => ({ ...prev, email: t('login.validation.email') }));
-      return false;
-    }
-    
-    const isValid = emailRegex.test(value) || collegeIdRegex.test(value);
-    if (!isValid) {
       setErrors(prev => ({ ...prev, email: t('login.validation.email') }));
       return false;
     }

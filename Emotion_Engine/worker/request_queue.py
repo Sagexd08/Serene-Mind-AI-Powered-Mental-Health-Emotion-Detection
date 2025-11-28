@@ -47,6 +47,9 @@ class RequestQueue:
             # model.predict is async
             class_name = await self.model.predict(image, showClassName=True)
             print(f"Prediction for {uid}: {class_name}")
+            print(f"\n{'='*30}")
+            print(f"*** EMOTION DETECTED: {class_name} ***")
+            print(f"{'='*30}\n")
         except Exception as e:
             print(f"Prediction failed for {uid}: {e}")
             return

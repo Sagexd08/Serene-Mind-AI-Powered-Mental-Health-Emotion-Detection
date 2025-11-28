@@ -14,7 +14,7 @@ export interface User {
 }
 
 export interface AuthResponse {
-  message: string;
+  message?: string;
   accessToken: string;
   refreshToken: string;
   user: User;
@@ -43,32 +43,21 @@ class ApiService {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      // Bypass mode - accept any credentials and generate mock tokens
-      console.log(
-        "Login bypass mode - accepting credentials for userId:",
-        credentials.userId
+      const response = await this.axiosInstance.post<AuthResponse>(
+        API_CONFIG.ENDPOINTS.LOGIN,
+        credentials
       );
 
-      const mockResponse: AuthResponse = {
-        message: "User registered successfully",
-        accessToken:
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIiIiwiaWF0IjoxNjMyNzI5MjAwfQ.mock_token",
-        refreshToken: "550e8400-e29b-41d4-a716-446655440000",
-        user: {
-          uuid: `user-${credentials.userId}-${Date.now()}`,
-          userId: credentials.userId,
-          email: `${credentials.userId}@university.edu`,
-        },
-      };
+      const authData = response.data;
 
       // Store tokens securely
-      await this.storeAuthTokens(mockResponse);
-      console.log("Login successful with bypass mode");
+      await this.storeAuthTokens(authData);
+      console.log("Login successful");
 
-      return mockResponse;
+      return authData;
     } catch (error: any) {
       console.error("Login error:", error);
-      throw new Error(error.message || "Login failed. Please try again.");
+      throw new Error(error.response?.data?.error || "Login failed. Please try again.");
     }
   }
 
@@ -88,6 +77,7 @@ class ApiService {
         }
       );
 
+      console.log('Received encryption key from server:', response.data.encryptionKey ? 'Present' : 'Missing');
       return response.data.encryptionKey;
     } catch (error: any) {
       console.error('Failed to get encryption key:', error);
@@ -160,11 +150,11 @@ class ApiService {
    */
   private async storeAuthTokens(authData: AuthResponse): Promise<void> {
     try {
-      await SecureStore.setItemAsync("accessToken", authData.accessToken);
-      await SecureStore.setItemAsync("refreshToken", authData.refreshToken);
-      await SecureStore.setItemAsync("userId", authData.user.userId);
-      await SecureStore.setItemAsync("userUuid", authData.user.uuid);
-      await SecureStore.setItemAsync("userEmail", authData.user.email);
+      if (authData.accessToken) await SecureStore.setItemAsync("accessToken", String(authData.accessToken));
+      if (authData.refreshToken) await SecureStore.setItemAsync("refreshToken", String(authData.refreshToken));
+      if (authData.user.userId) await SecureStore.setItemAsync("userId", String(authData.user.userId));
+      if (authData.user.uuid) await SecureStore.setItemAsync("userUuid", String(authData.user.uuid));
+      if (authData.user.email) await SecureStore.setItemAsync("userEmail", String(authData.user.email));
     } catch (error) {
       console.error("Error storing auth tokens:", error);
       throw new Error("Failed to store authentication tokens securely.");

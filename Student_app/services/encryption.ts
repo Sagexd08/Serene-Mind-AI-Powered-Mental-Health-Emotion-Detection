@@ -1,3 +1,4 @@
+import 'react-native-get-random-values';
 import CryptoJS from 'crypto-js';
 
 /**
@@ -12,17 +13,43 @@ class EncryptionService {
    */
   encryptImage(imageBase64: string, encryptionKey: string): string {
     try {
+      console.log('Encrypting image with key length:', encryptionKey?.length);
+      
+      if (!imageBase64) {
+        throw new Error('Image data is empty');
+      }
+      
+      if (!encryptionKey) {
+        throw new Error('Encryption key is empty');
+      }
+
       // Remove data URL prefix if present
       const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-      // Encrypt the image data using AES
-      const encrypted = CryptoJS.AES.encrypt(cleanBase64, encryptionKey);
+      // Parse key (expecting hex string from backend)
+      const key = CryptoJS.enc.Hex.parse(encryptionKey);
+      
+      // Generate random IV (16 bytes)
+      const iv = CryptoJS.lib.WordArray.random(16);
 
-      // Return encrypted data as base64 string
-      return encrypted.toString();
+      // Encrypt the image data using AES-CBC
+      const encrypted = CryptoJS.AES.encrypt(cleanBase64, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      // Combine IV and Ciphertext
+      // encrypted.ciphertext is the ciphertext WordArray
+      const combined = iv.clone().concat(encrypted.ciphertext);
+
+      // Return as base64 string
+      return combined.toString(CryptoJS.enc.Base64);
     } catch (error) {
-      console.error('Encryption error:', error);
-      throw new Error('Failed to encrypt image data');
+      console.error('Encryption error details:', error);
+      // @ts-ignore
+      if (error.message) console.error('Error message:', error.message);
+      throw new Error('Failed to encrypt image data: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -88,13 +115,28 @@ class EncryptionService {
       };
 
       // Encrypt the entire payload
+      console.log('Encrypting payload with key length:', encryptionKey?.length);
       const payloadString = JSON.stringify(payload);
-      const encrypted = CryptoJS.AES.encrypt(payloadString, encryptionKey);
+      
+      // Parse key (expecting hex string from backend)
+      const key = CryptoJS.enc.Hex.parse(encryptionKey);
+      
+      // Generate random IV (16 bytes)
+      const iv = CryptoJS.lib.WordArray.random(16);
 
-      return encrypted.toString();
+      const encrypted = CryptoJS.AES.encrypt(payloadString, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+
+      // Combine IV and Ciphertext
+      const combined = iv.clone().concat(encrypted.ciphertext);
+
+      return combined.toString(CryptoJS.enc.Base64);
     } catch (error) {
-      console.error('Payload encryption error:', error);
-      throw new Error('Failed to encrypt face data with metadata');
+      console.error('Payload encryption error details:', error);
+      throw new Error('Failed to encrypt face data with metadata: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 }
