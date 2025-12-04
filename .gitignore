@@ -1,6 +1,5 @@
 .venv
 facialdata
-*.pth
 
 node_modules
 dist
