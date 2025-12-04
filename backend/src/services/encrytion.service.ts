@@ -21,7 +21,7 @@ export async function submitDecryptionRequest(key: string, userId: string) {
         [key, ts, userId]
       );
     } else if (db.driver === "sqlite") {
-      db.run(
+      await db.run(
         `INSERT INTO decryptionWindow (key, expiary, userId) VALUES (?, ?, ?)`,
         [key, ts, userId]
       );
@@ -59,7 +59,7 @@ export async function getDecryptionKey(
       );
       return result.rows && result.rows.length > 0 ? result.rows[0] : null;
     } else if (db.driver === "sqlite") {
-      const result = db.query(
+      const result = await db.query(
         `SELECT key, expiary, userId FROM decryptionWindow WHERE userId = ? ORDER BY created_at DESC LIMIT 1`,
         [userId]
       );

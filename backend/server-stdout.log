@@ -1,9 +1,0 @@
-Server listening on http://localhost:3000
-GET /health
-GET /health
-POST /auth/register
-POST /auth/login
-POST /encryption
-POST /api/submit
-POST /auth/logout
-POST /auth/me

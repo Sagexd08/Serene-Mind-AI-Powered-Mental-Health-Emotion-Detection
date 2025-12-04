@@ -1,6 +1,6 @@
 import type { driver } from "../types/db.connect";
 import { Pool } from "pg";
-import Database from "better-sqlite3";
+import { createClient } from "@libsql/client";
 
 let cachedConnection: any = null;
 
@@ -28,7 +28,7 @@ function checkDriver(): driver {
   return driver;
 }
 
-export function connectToDB() {
+export async function connectToDB() {
   try {
     if (cachedConnection) return cachedConnection;
 
@@ -56,15 +56,22 @@ export function connectToDB() {
       case "sqlite": {
         const sqlitePath = process.env.SQLITE_PATH || "database.sqlite";
 
-        const db = new Database(sqlitePath);
+        const client = createClient({
+          url: `file:${sqlitePath}`,
+        });
 
         cachedConnection = {
           driver: "sqlite",
-          client: db,
-          query: (sql: string, params?: any[]) =>
-            params ? db.prepare(sql).all(params) : db.prepare(sql).all(),
-          run: (sql: string, params?: any[]) =>
-            params ? db.prepare(sql).run(params) : db.prepare(sql).run(),
+          client: client,
+          query: async (sql: string, params?: any[]) => {
+            const result = await client.execute({ sql, args: params || [] });
+            // Map LibSQL ResultSet to a structure compatible with existing code if needed.
+            // Existing code expects an array of rows for query results.
+            return result.rows;
+          },
+          run: async (sql: string, params?: any[]) => {
+             return await client.execute({ sql, args: params || [] });
+          },
         };
 
         return cachedConnection;

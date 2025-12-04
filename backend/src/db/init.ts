@@ -7,7 +7,7 @@ import path from "path";
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    const db = connectToDB();
+    const db = await connectToDB();
 
     console.log("Initializing database...");
 
@@ -44,7 +44,7 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of userStatements) {
-        db.run(stmt);
+        await db.run(stmt);
       }
       console.log("✓ Users table created/verified");
 
@@ -53,7 +53,7 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of refreshTokenStatements) {
-        db.run(stmt);
+        await db.run(stmt);
       }
       console.log("✓ Refresh tokens table created/verified");
 
@@ -62,7 +62,7 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of decryptionWindowStatements) {
-        db.run(stmt);
+        await db.run(stmt);
       }
       console.log("✓ Decryption window table created/verified");
     }
@@ -74,63 +74,3 @@ export async function initializeDatabase(): Promise<void> {
   }
 }
 
-/**
- * Seed database with sample data for development
- */
-export async function seedDatabase(): Promise<void> {
-  try {
-    const db = connectToDB();
-
-    console.log("Seeding database...");
-
-    // Check if demo user already exists
-    let existingUser;
-    if (db.driver === "postgres") {
-      existingUser = await db.query("SELECT * FROM users WHERE username = $1", [
-        "demoUser",
-      ]);
-    } else if (db.driver === "sqlite") {
-      existingUser = db.query("SELECT * FROM users WHERE username = ?", [
-        "demoUser",
-      ]);
-    }
-
-    const hasExistingUser =
-      existingUser &&
-      (Array.isArray(existingUser.rows)
-        ? existingUser.rows.length > 0
-        : existingUser.length > 0);
-
-    if (!hasExistingUser) {
-      // Insert demo user (password: demoPass)
-      const demoUuid = "123e4567-e89b-12d3-a456-426614174000";
-      const demoUsername = "demoUser";
-      const demoPasswordHash =
-        "$2b$10$rZ5xVq8J5vZ5xVq8J5vZ5uKW5xVq8J5vZ5xVq8J5vZ5xVq8J5vZ5x"; // "demoPass" hashed
-      const demoEmail = "demo@example.com";
-
-      if (db.driver === "postgres") {
-        await db.query(
-          "INSERT INTO users (uuid, username, password_hash, email) VALUES ($1, $2, $3, $4)",
-          [demoUuid, demoUsername, demoPasswordHash, demoEmail]
-        );
-      } else if (db.driver === "sqlite") {
-        db.run(
-          "INSERT INTO users (uuid, username, password_hash, email) VALUES (?, ?, ?, ?)",
-          [demoUuid, demoUsername, demoPasswordHash, demoEmail]
-        );
-      }
-
-      console.log(
-        "✓ Demo user created (username: demoUser, password: demoPass)"
-      );
-    } else {
-      console.log("✓ Demo user already exists");
-    }
-
-    console.log("Database seeding completed successfully!");
-  } catch (error) {
-    console.error("Error seeding database:", error);
-    throw error;
-  }
-}

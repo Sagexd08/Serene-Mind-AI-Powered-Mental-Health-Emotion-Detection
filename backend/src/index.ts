@@ -8,14 +8,13 @@ import { app } from "./app.js";
 
 const port = process.env.PORT || 3000;
 
-import { initializeDatabase, seedDatabase } from "./db/init.js";
+import { initializeDatabase } from "./db/init.js";
 
 
 // Initialize Database and Start Server
 (async () => {
   try {
     await initializeDatabase();
-    await seedDatabase();
 
     app.listen(port, () => {
       console.log(`Server listening on http://localhost:${port}`);

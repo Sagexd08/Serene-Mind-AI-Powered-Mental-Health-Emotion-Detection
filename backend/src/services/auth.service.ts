@@ -30,7 +30,7 @@ async function verifyUserCredentials(
         userId,
       ]);
     } else if (db.driver === "sqlite") {
-      result = db.query("SELECT * FROM users WHERE username = ?", [userId]);
+      result = await db.query("SELECT * FROM users WHERE username = ?", [userId]);
     }
 
     if (
@@ -103,7 +103,7 @@ async function registerUser(
         userId,
       ]);
     } else if (db.driver === "sqlite") {
-      existingUser = db.query("SELECT * FROM users WHERE username = ?", [
+      existingUser = await db.query("SELECT * FROM users WHERE username = ?", [
         userId,
       ]);
     }
@@ -128,7 +128,7 @@ async function registerUser(
         [uuid, userId, hashedPassword]
       );
     } else if (db.driver === "sqlite") {
-      db.run(
+      await db.run(
         "INSERT INTO users (uuid, username, password_hash) VALUES (?, ?, ?)",
         [uuid, userId, hashedPassword]
       );
@@ -166,7 +166,7 @@ async function saveRefreshToken(
         [userId]
       );
     } else if (db.driver === "sqlite") {
-      userResult = db.query("SELECT uuid FROM users WHERE username = ?", [
+      userResult = await db.query("SELECT uuid FROM users WHERE username = ?", [
         userId,
       ]);
     }
@@ -193,7 +193,7 @@ async function saveRefreshToken(
         [token, userUuid, expiresAt]
       );
     } else if (db.driver === "sqlite") {
-      db.run(
+      await db.run(
         "INSERT OR REPLACE INTO refresh_tokens (token, user_uuid, expires_at) VALUES (?, ?, ?)",
         [token, userUuid, expiresAt.toISOString()]
       );
@@ -213,7 +213,7 @@ async function invalidateRefreshToken(token: string): Promise<void> {
     if (db.driver === "postgres") {
       await db.query("DELETE FROM refresh_tokens WHERE token = $1", [token]);
     } else if (db.driver === "sqlite") {
-      db.run("DELETE FROM refresh_tokens WHERE token = ?", [token]);
+      await db.run("DELETE FROM refresh_tokens WHERE token = ?", [token]);
     }
   } catch (error) {
     console.error("Error invalidating refresh token:", error);
@@ -236,7 +236,7 @@ async function findUserByRefreshToken(token: string): Promise<user | null> {
         [token]
       );
     } else if (db.driver === "sqlite") {
-      result = db.query(
+      result = await db.query(
         `SELECT u.* FROM users u
          INNER JOIN refresh_tokens rt ON u.uuid = rt.user_uuid
          WHERE rt.token = ? AND rt.expires_at > datetime('now')`,
@@ -294,7 +294,7 @@ async function getUserByUuid(uuid: string): Promise<user | null> {
     if (db.driver === "postgres") {
       result = await db.query("SELECT * FROM users WHERE uuid = $1", [uuid]);
     } else if (db.driver === "sqlite") {
-      result = db.query("SELECT * FROM users WHERE uuid = ?", [uuid]);
+      result = await db.query("SELECT * FROM users WHERE uuid = ?", [uuid]);
     }
 
     if (
@@ -340,7 +340,7 @@ async function getRefreshToken(token: string): Promise<{
         [token]
       );
     } else if (db.driver === "sqlite") {
-      result = db.query(
+      result = await db.query(
         "SELECT user_uuid as user_id, expires_at FROM refresh_tokens WHERE token = ?",
         [token]
       );

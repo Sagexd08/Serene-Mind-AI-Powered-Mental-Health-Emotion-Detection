@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import { initializeDatabase, seedDatabase } from "../db/init.js";
+import { initializeDatabase } from "../db/init.js";
 
 async function setup_database() {
   try {
@@ -9,11 +9,6 @@ async function setup_database() {
 
     // Initialize database tables
     await initializeDatabase();
-
-    console.log("\n");
-
-    // Seed with demo data
-    await seedDatabase();
 
     console.log("\n=== Setup Complete ===");
     process.exit(0);

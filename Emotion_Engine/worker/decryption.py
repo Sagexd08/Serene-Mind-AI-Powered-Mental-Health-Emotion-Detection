@@ -39,9 +39,30 @@ def decrypt_image(encrypted_data: bytes, key: str) -> Image.Image:
         unpadder = padding.PKCS7(128).unpadder()
         data = unpadder.update(padded_data) + unpadder.finalize()
         
-        # Convert bytes to Image
-        image = Image.open(io.BytesIO(data))
-        return image
+        # Parse JSON payload
+        import json
+        try:
+            json_str = data.decode('utf-8')
+            payload = json.loads(json_str)
+            # Check if it's the expected payload format
+            if 'image' in payload:
+                image_b64 = payload['image']
+                # The image might be raw base64 or data URI
+                if ',' in image_b64:
+                    image_b64 = image_b64.split(',')[1]
+                image_bytes = base64.b64decode(image_b64)
+                image = Image.open(io.BytesIO(image_bytes))
+                return image
+            else:
+                # Fallback for backward compatibility or if raw image was sent
+                print("Warning: 'image' field not found in payload, attempting to treat as raw image bytes.")
+                image = Image.open(io.BytesIO(data))
+                return image
+        except (json.JSONDecodeError, UnicodeDecodeError):
+             # Fallback if not JSON
+            print("Warning: Failed to decode as JSON, treating as raw image bytes.")
+            image = Image.open(io.BytesIO(data))
+            return image
     except Exception as e:
         print(f"Decryption failed: {e}")
         raise e
