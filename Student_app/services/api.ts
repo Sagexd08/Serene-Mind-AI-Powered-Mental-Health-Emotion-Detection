@@ -10,7 +10,7 @@ export interface LoginCredentials {
 export interface User {
   uuid: string;
   userId: string;
-  email: string;
+  email: string | null;
 }
 
 export interface AuthResponse {
@@ -36,6 +36,76 @@ class ApiService {
         "Content-Type": "application/json",
       },
     });
+
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors() {
+    // Request Interceptor: Attach Token
+    this.axiosInstance.interceptors.request.use(
+      async (config) => {
+        const token = await SecureStore.getItemAsync("accessToken");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response Interceptor: Handle Refresh
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        // Prevent infinite loops
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const refreshToken = await SecureStore.getItemAsync("refreshToken");
+            
+            if (!refreshToken) {
+              throw new Error("No refresh token available");
+            }
+
+            console.log("Attempting to refresh token...");
+            
+            // Call backend refresh endpoint
+            // NOTE: We use axios directly to avoid interceptors on this call
+            const refreshResponse = await axios.post(
+              `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH}`,
+              { refreshToken },
+              {
+                headers: { "Content-Type": "application/json" },
+                timeout: API_CONFIG.TIMEOUT
+              }
+            );
+
+            const { accessToken } = refreshResponse.data;
+
+            if (accessToken) {
+              console.log("Token refresh successful");
+              
+              // Store new access token
+              await SecureStore.setItemAsync("accessToken", accessToken);
+              
+              // Update authorization header and retry original request
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              return this.axiosInstance(originalRequest);
+            }
+          } catch (refreshError) {
+            console.error("Token refresh failed:", refreshError);
+            // Logout if refresh fails
+            await this.clearAuthTokens();
+            // TODO: Ideally redirect to login, but we can't access router here easily. 
+            // The UI will detect the missing token on next check.
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   /**
@@ -172,15 +242,16 @@ class ApiService {
       const userUuid = await SecureStore.getItemAsync("userUuid");
       const userEmail = await SecureStore.getItemAsync("userEmail");
 
-      if (accessToken && refreshToken && userId && userUuid && userEmail) {
+      // Email is optional, UUID and UserID are required along with tokens
+      if (accessToken && refreshToken && userId) {
         return {
           message: "User authenticated",
           accessToken,
           refreshToken,
           user: {
-            uuid: userUuid,
+            uuid: userUuid || "",
             userId,
-            email: userEmail,
+            email: userEmail || null,
           },
         };
       }

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -8,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { supabase } from '../../lib/supabase';
 import apiService from '../../services/api';
 
 type ScreeningType = 'PHQ9' | 'GAD7';
@@ -124,6 +126,7 @@ export default function ScreeningModal({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [showResult, setShowResult] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const router = useRouter();
 
   const questions = PHQ9_QUESTIONS;
   const totalQuestions = questions.length;
@@ -224,9 +227,29 @@ export default function ScreeningModal({
 
           <TouchableOpacity
             style={styles.doneButton}
-            onPress={() => {
+            onPress={async () => {
+              try {
+                const tokens = await apiService.getStoredAuthTokens();
+                const userId = tokens?.user?.userId || 'anonymous';
+                
+                const { error } = await supabase.from('form_result').insert({
+                  userId: userId,
+                  score: result.score,
+                });
+
+                if (error) {
+                  console.error('Supabase submission error:', error);
+                }
+              } catch (err) {
+                console.error('Failed to submit screening result:', err);
+              }
+              
               onComplete?.(result);
-              onClose();
+              if (onClose) {
+                onClose();
+              } else {
+                router.back();
+              }
             }}
           >
             <Text style={styles.doneButtonText}>Done</Text>
@@ -239,7 +262,13 @@ export default function ScreeningModal({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onClose}>
+        <TouchableOpacity onPress={() => {
+            if (onClose) {
+                onClose();
+            } else {
+                router.back();
+            }
+        }}>
           <Ionicons name="close" size={28} color="#1a1a1a" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>

@@ -11,7 +11,9 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Linking
 } from 'react-native';
+import geminiService from '@/services/gemini';
 
 interface Message {
   id: string;
@@ -54,6 +56,13 @@ export default function Chatbot() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    // Reset AI history when chat opens
+    geminiService.startChat();
+    
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, []); // Run only once on mount
+
+  useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
@@ -72,11 +81,30 @@ export default function Chatbot() {
     setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const botResponse = generateBotResponse(messageText);
-      setMessages((prev) => [...prev, botResponse]);
+    try {
+      const response = await geminiService.generateResponse(messageText);
+      
+      const botMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: response.message,
+        timestamp: new Date(),
+        actions: response.actions,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: "I'm having trouble connecting to my brain right now. Please check your connection.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleQuickPrompt = (prompt: typeof QUICK_PROMPTS[0]) => {
@@ -84,22 +112,41 @@ export default function Chatbot() {
   };
 
   const handleAction = (action: string) => {
+    console.log("Handling action:", action);
     switch (action) {
       case 'breathing':
-        Alert.alert('Breathing Exercise', 'Starting 5-minute breathing exercise...');
+        router.push('/screens/Resources');
         break;
       case 'screening':
-        Alert.alert('Screening', 'Opening PHQ-9 screening form...');
+        router.push('/screens/ScreeningModal');
         break;
       case 'resources':
-        Alert.alert('Resources', 'Opening wellness resources...');
+        router.push('/screens/Resources');
+        break;
+      case 'activities':
+        router.push('/screens/MyActivity');
         break;
       case 'escalate':
         Alert.alert(
-          'Connect with Counselor',
-          'A counselor will contact you within 24 hours.'
+          'Emergency Support',
+          'Would you like to call the crisis helpline?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Call Now', 
+              style: 'destructive',
+              onPress: () => Linking.openURL('tel:9152987821') 
+            }
+          ]
         );
         break;
+      default:
+        // Fallback for unknown actions
+        if (action.includes('resource')) {
+            router.push('/screens/Resources');
+        } else {
+            console.warn("Unknown action:", action);
+        }
     }
   };
 
@@ -240,71 +287,7 @@ function MessageBubble({ message, onAction }: { message: Message; onAction: (act
   );
 }
 
-function generateBotResponse(userMessage: string): Message {
-  const lowerMessage = userMessage.toLowerCase();
-
-  if (lowerMessage.includes('anxious') || lowerMessage.includes('anxiety')) {
-    return {
-      id: Date.now().toString(),
-      type: 'bot',
-      content: 'I understand you\'re feeling anxious. That\'s a common experience. Would you like to try a breathing exercise or talk to a counselor?',
-      timestamp: new Date(),
-      actions: [
-        { label: 'Start breathing', action: 'breathing', icon: 'leaf' },
-        { label: 'Talk to counselor', action: 'escalate', icon: 'person' },
-      ],
-    };
-  }
-
-  if (lowerMessage.includes('sleep') || lowerMessage.includes('insomnia')) {
-    return {
-      id: Date.now().toString(),
-      type: 'bot',
-      content: 'Sleep difficulties can affect your wellbeing. I can suggest sleep resources. What would help?',
-      timestamp: new Date(),
-      actions: [
-        { label: 'Sleep resources', action: 'resources', icon: 'moon' },
-        { label: 'Screening', action: 'screening', icon: 'clipboard' },
-      ],
-    };
-  }
-
-  if (lowerMessage.includes('counselor') || lowerMessage.includes('therapist')) {
-    return {
-      id: Date.now().toString(),
-      type: 'bot',
-      content: 'I can help you connect with a professional counselor. Would you like to proceed?',
-      timestamp: new Date(),
-      actions: [
-        { label: 'Yes, connect me', action: 'escalate', icon: 'checkmark' },
-      ],
-    };
-  }
-
-  if (lowerMessage.includes('stressed') || lowerMessage.includes('stress')) {
-    return {
-      id: Date.now().toString(),
-      type: 'bot',
-      content: 'Stress is common. Would you like immediate relief techniques or long-term resources?',
-      timestamp: new Date(),
-      actions: [
-        { label: 'Quick relief', action: 'breathing', icon: 'flash' },
-        { label: 'Resources', action: 'resources', icon: 'library' },
-      ],
-    };
-  }
-
-  return {
-    id: Date.now().toString(),
-    type: 'bot',
-    content: 'Thank you for sharing. I\'m here to help. Can you tell me more about what you\'re experiencing?',
-    timestamp: new Date(),
-    actions: [
-      { label: 'Take screening', action: 'screening', icon: 'clipboard' },
-      { label: 'View resources', action: 'resources', icon: 'library' },
-    ],
-  };
-}
+// Removed static generateBotResponse function
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', {
