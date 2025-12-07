@@ -1,4 +1,6 @@
 import asyncio
+from rich.console import Console
+from rich.panel import Panel
 from storage import KeyStorage
 from decryption import decrypt_image
 from model_loader import EmotionRecognitionModel
@@ -7,6 +9,7 @@ import datetime
 
 class RequestQueue:
     def __init__(self, model: EmotionRecognitionModel, storage: KeyStorage):
+        self.console = Console()
         self.queue = asyncio.Queue()
         self.model = model
         self.storage = storage
@@ -45,19 +48,17 @@ class RequestQueue:
         # 3. Predict
         try:
             # model.predict is async
+            # model.predict is async
             class_name = await self.model.predict(image, showClassName=True)
-            print(f"Prediction for {uid}: {class_name}")
-            print(f"\n{'='*30}")
-            print(f"*** EMOTION DETECTED: {class_name} ***")
-            print(f"{'='*30}\n")
+            self.console.print(Panel(f"[bold green]EMOTION DETECTED: {class_name}[/bold green]", title=f"Prediction for {uid}", expand=False))
         except Exception as e:
             print(f"Prediction failed for {uid}: {e}")
             return
 
         # 4. Send Result
         try:
-            from external_client import send_result
+            from supabase_client import save_user_emotion
             timestamp = datetime.datetime.now().isoformat()
-            await send_result(uid, class_name, timestamp)
+            await save_user_emotion(uid, class_name, timestamp)
         except Exception as e:
             print(f"Failed to send result for {uid}: {e}")
