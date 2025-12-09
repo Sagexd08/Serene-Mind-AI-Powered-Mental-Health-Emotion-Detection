@@ -7,6 +7,7 @@ import healthRoutes from "./routes/health.route.js";
 import authRouter from "./routes/auth.route.js";
 import encryptionRouter from "./routes/encryption.route.js";
 import submitRouter from "./routes/submit.route.js";
+import chatRouter from "./routes/chat.route.js";
 
 import { requestLogger } from "./middlewares/requestLogger.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
@@ -22,5 +23,6 @@ app.use("/health", healthRoutes);
 app.use("/auth", authRouter);
 app.use("/encryption", encryptionRouter);
 app.use("/api/submit", submitRouter);
+app.use("/api/chat", chatRouter);
 
 app.use(errorHandler);
