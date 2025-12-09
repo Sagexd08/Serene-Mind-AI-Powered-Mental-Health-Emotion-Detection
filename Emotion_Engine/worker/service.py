@@ -19,7 +19,7 @@ class EmotionService(interface_pb2_grpc.EmotionServiceServicer):
         self.queue = queue
         self.storage = storage
 
-    def SendDecryptionKey(self, request, context):
+    async def SendDecryptionKey(self, request, context):
         uid = request.uid
         key = request.key
         print(f"Received key for {uid}")
@@ -53,11 +53,14 @@ async def serve():
     storage = KeyStorage()
     model = EmotionRecognitionModel(path="models/model_v1.pth") # Adjust path as needed
     # We need to load the model. Since model.load is async, we do it here.
-    # Wait, model_loader.py has async load.
     
     print("Loading model...")
-    await model.load()
-    print("Model loaded.")
+    try:
+        await model.load()
+        print("Model loaded.")
+    except Exception as e:
+        print(f"Failed to load model: {e}")
+        print("Continuing anyway - model will fail predictions until loaded")
 
     queue = RequestQueue(model, storage)
     
