@@ -3,6 +3,7 @@ import { Metadata } from "next"
 import { metadata as siteMetadata } from "./matadata"
 import { Montserrat, Open_Sans } from "next/font/google"
 import "./globals.css"
+import { GlobalContextProvider } from "@/context/global-context-manager"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -28,9 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${openSans.variable}`}>
       <body>
-
-        {children}
-
+        <GlobalContextProvider>
+          {children}
+        </GlobalContextProvider>
       </body>
     </html>
   )

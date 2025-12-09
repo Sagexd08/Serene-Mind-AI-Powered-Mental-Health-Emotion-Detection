@@ -12,6 +12,7 @@ import {
   Settings,
   Brain,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Live Chat", href: "/chat", icon: MessageCircle },
   { name: "My Cases", href: "/cases", icon: FileText },
   { name: "Students", href: "/students", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
