@@ -1,571 +1,655 @@
- import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  FlatList,
+  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 
-interface Resource {
-  id: string;
-  title: string;
-  category: string;
-  duration: string;
-  language: string;
-  tags: string[];
-  type: 'video' | 'audio' | 'article' | 'neuromodulation';
-}
+const ResourceHubScreen = ({ route }: any) => {
+  const { width, height } = useWindowDimensions();
+  const isSmallScreen = width < 375;
+  const [selectedFilter, setSelectedFilter] = useState('All');
+  const [selectedTab, setSelectedTab] = useState(route?.params?.tab || 'articles');
 
-const RESOURCES: Resource[] = [
-  {
-    id: '1',
-    title: '5-Minute Breathing Exercise',
-    category: 'Calm',
-    duration: '5 min',
-    language: 'en',
-    tags: ['anxiety', 'stress'],
-    type: 'audio',
-  },
-  {
-    id: '2',
-    title: 'Progressive Muscle Relaxation',
-    category: 'Calm',
-    duration: '10 min',
-    language: 'en',
-    tags: ['tension', 'relaxation'],
-    type: 'audio',
-  },
-  {
-    id: '3',
-    title: 'Focus Enhancement Session',
-    category: 'Focus',
-    duration: '15 min',
-    language: 'en',
-    tags: ['concentration', 'productivity'],
-    type: 'neuromodulation',
-  },
-  {
-    id: '4',
-    title: 'Sleep Preparation Routine',
-    category: 'Sleep',
-    duration: '20 min',
-    language: 'en',
-    tags: ['insomnia', 'sleep'],
-    type: 'audio',
-  },
-];
+  const filters = ['All', 'Stress', 'Anxiety', 'Depression', 'Bipolar'];
 
-export default function Resources() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const articles = [
+    { id: 1, title: 'Understanding Stress & How to Manage It', category: 'Stress', duration: '8 min read', icon: '📚' },
+    { id: 2, title: 'Anxiety: Causes, Symptoms & Solutions', category: 'Anxiety', duration: '10 min read', icon: '🧠' },
+    { id: 3, title: 'Living with Depression: A Complete Guide', category: 'Depression', duration: '12 min read', icon: '💭' },
+    { id: 4, title: 'Bipolar Disorder: What You Need to Know', category: 'Bipolar', duration: '15 min read', icon: '🔄' },
+    { id: 5, title: 'Stress Relief Techniques for Students', category: 'Stress', duration: '6 min read', icon: '🎓' },
+    { id: 6, title: 'Managing Social Anxiety in College', category: 'Anxiety', duration: '9 min read', icon: '👥' },
+  ];
 
-  const categories = ['All', 'Calm', 'Focus', 'Sleep'];
+  const asrPlaylists = [
+    {
+      id: 1,
+      name: 'Stress Release ASMR',
+      tracks: 8,
+      duration: '45 min',
+      color: '#3B82F6',
+      audios: ['Gentle Rain Sounds', 'Soft Whispers', 'Nature Ambience', 'Calming Voices']
+    },
+    {
+      id: 2,
+      name: 'Deep Sleep ASMR',
+      tracks: 6,
+      duration: '60 min',
+      color: '#6366F1',
+      audios: ['Ocean Waves', 'White Noise', 'Binaural Sleep', 'Night Forest']
+    },
+    {
+      id: 3,
+      name: 'Focus & Concentration',
+      tracks: 10,
+      duration: '50 min',
+      color: '#06B6D4',
+      audios: ['Study Music', 'Ambient Focus', 'Light Jazz', 'Flow State Sounds']
+    },
+    {
+      id: 4,
+      name: 'Anxiety Relief',
+      tracks: 7,
+      duration: '38 min',
+      color: '#10B981',
+      audios: ['Breathing Guides', 'Calm Piano', 'Meditation Bells', 'Peaceful Voices']
+    },
+  ];
 
-  const filteredResources = RESOURCES.filter((resource) => {
-    const matchesSearch =
-      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory =
-      selectedCategory === 'All' || resource.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const exercises = [
+    { id: 1, title: '4-7-8 Breathing Technique', type: 'Breathing', duration: '5 min', difficulty: 'Beginner', icon: '🫁' },
+    { id: 2, title: 'Box Breathing Exercise', type: 'Breathing', duration: '3 min', difficulty: 'Beginner', icon: '📦' },
+    { id: 3, title: 'Guided Body Scan Meditation', type: 'Meditation', duration: '15 min', difficulty: 'Intermediate', icon: '🧘' },
+    { id: 4, title: 'Mindfulness for Beginners', type: 'Meditation', duration: '10 min', difficulty: 'Beginner', icon: '🌸' },
+    { id: 5, title: 'Progressive Muscle Relaxation', type: 'Exercise', duration: '12 min', difficulty: 'Beginner', icon: '💪' },
+    { id: 6, title: 'Walking Meditation Guide', type: 'Meditation', duration: '20 min', difficulty: 'Intermediate', icon: '🚶' },
+  ];
+
+  const filteredArticles = selectedFilter === 'All' 
+    ? articles 
+    : articles.filter(a => a.category === selectedFilter);
+
+  const renderArticles = () => (
+    <>
+      {/* Filter Chips - Responsive Wrapper */}
+      <View style={styles.filtersWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filtersContainer}
+          contentContainerStyle={styles.filtersContent}
+          scrollEventThrottle={16}
+        >
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterChip,
+                selectedFilter === filter && styles.filterChipActive,
+              ]}
+              onPress={() => setSelectedFilter(filter)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedFilter === filter && styles.filterTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {filter}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Articles List */}
+      <FlatList
+        data={filteredArticles}
+        keyExtractor={(item) => item.id.toString()}
+        scrollEnabled={false}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.articleCard} activeOpacity={0.7}>
+            <View style={styles.articleIcon}>
+              <Text style={styles.iconText}>{item.icon}</Text>
+            </View>
+            <View style={styles.articleContent}>
+              <Text style={styles.articleTitle} numberOfLines={2}>{item.title}</Text>
+              <View style={styles.articleMeta}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText} numberOfLines={1}>{item.category}</Text>
+                </View>
+                <View style={styles.durationBadge}>
+                  <Ionicons name="time" size={9} color="#999" />
+                  <Text style={styles.durationText} numberOfLines={1}>{item.duration}</Text>
+                </View>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={12} color="#3B82F6" style={{ marginLeft: scaleSize(8) }} />
+          </TouchableOpacity>
+        )}
+      />
+    </>
+  );
+
+  const renderAudio = () => (
+    <>
+      <Text style={styles.sectionTitle}>ASMR Playlists</Text>
+      <FlatList
+        data={asrPlaylists}
+        keyExtractor={(item) => item.id.toString()}
+        scrollEnabled={false}
+        renderItem={({ item }) => (
+          <View style={[styles.playlistCard, { borderTopColor: item.color, borderTopWidth: 4 }]}>
+            <View style={styles.playlistHeader}>
+              <View>
+                <Text style={styles.playlistName}>{item.name}</Text>
+                <Text style={styles.playlistInfo}>{item.tracks} tracks • {item.duration}</Text>
+              </View>
+              <Ionicons name="musical-notes" size={20} color={item.color} />
+            </View>
+            <Text style={styles.audiosLabel}>Included Audios:</Text>
+            {item.audios.map((audio, idx) => (
+              <View key={idx} style={styles.audioItem}>
+                <Ionicons name="play" size={12} color={item.color} />
+                <Text style={styles.audioName}>{audio}</Text>
+                <Ionicons name="chevron-forward" size={12} color="#999" style={{ marginLeft: 'auto' }} />
+              </View>
+            ))}
+            <TouchableOpacity style={[styles.playButton, { backgroundColor: item.color }]}>
+              <Text style={styles.playButtonText}>Play Playlist</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      />
+    </>
+  );
+
+  const renderExercises = () => (
+    <>
+      {/* Breathing Exercises */}
+      <View>
+        <Text style={styles.sectionTitle}>Breathing Exercises</Text>
+        <FlatList
+          data={exercises.filter(e => e.type === 'Breathing')}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <View style={styles.exerciseCard}>
+              <View style={[styles.exerciseIcon, { backgroundColor: '#3B82F6' }]}>
+                <Text style={styles.iconText}>{item.icon}</Text>
+              </View>
+              <View style={styles.exerciseContent}>
+                <Text style={styles.exerciseTitle}>{item.title}</Text>
+                <View style={styles.exerciseMeta}>
+                  <View style={[styles.difficultyBadge, { backgroundColor: '#3B82F6' }]}>
+                    <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                  </View>
+                  <View style={styles.durationBadge}>
+                    <Ionicons name="time" size={10} color="#999" />
+                    <Text style={styles.durationText}>{item.duration}</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <Ionicons name="play" size={16} color="#3B82F6" fill="#3B82F6" />
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      </View>
+
+      {/* Meditation */}
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.sectionTitle}>Guided Meditation</Text>
+        <FlatList
+          data={exercises.filter(e => e.type === 'Meditation')}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <View style={styles.exerciseCard}>
+              <View style={[styles.exerciseIcon, { backgroundColor: '#A855F7' }]}>
+                <Text style={styles.iconText}>{item.icon}</Text>
+              </View>
+              <View style={styles.exerciseContent}>
+                <Text style={styles.exerciseTitle}>{item.title}</Text>
+                <View style={styles.exerciseMeta}>
+                  <View style={[styles.difficultyBadge, { backgroundColor: '#A855F7' }]}>
+                    <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                  </View>
+                  <View style={styles.durationBadge}>
+                    <Ionicons name="time" size={10} color="#999" />
+                    <Text style={styles.durationText}>{item.duration}</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <Ionicons name="play" size={16} color="#A855F7" fill="#A855F7" />
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      </View>
+
+      {/* Physical Exercises */}
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.sectionTitle}>Physical Exercises</Text>
+        <FlatList
+          data={exercises.filter(e => e.type === 'Exercise')}
+          keyExtractor={(item) => item.id.toString()}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <View style={styles.exerciseCard}>
+              <View style={[styles.exerciseIcon, { backgroundColor: '#10B981' }]}>
+                <Text style={styles.iconText}>{item.icon}</Text>
+              </View>
+              <View style={styles.exerciseContent}>
+                <Text style={styles.exerciseTitle}>{item.title}</Text>
+                <View style={styles.exerciseMeta}>
+                  <View style={[styles.difficultyBadge, { backgroundColor: '#10B981' }]}>
+                    <Text style={styles.difficultyText}>{item.difficulty}</Text>
+                  </View>
+                  <View style={styles.durationBadge}>
+                    <Ionicons name="time" size={10} color="#999" />
+                    <Text style={styles.durationText}>{item.duration}</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity>
+                <Ionicons name="play" size={16} color="#10B981" fill="#10B981" />
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Wellness Resources</Text>
-        <View style={styles.placeholder} />
+        <View>
+          <Text style={styles.headerTitle}>Resource Hub</Text>
+          <Text style={styles.headerSubtitle}>Your wellness library</Text>
+        </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search resources..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color="#666" />
-          </TouchableOpacity>
-        )}
+      {/* Search Bar */}
+      <View style={styles.searchBarContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={18} color="#666" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search..."
+            placeholderTextColor="#888"
+          />
+          <Ionicons name="options" size={18} color="#666" />
+        </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryScroll}
-        contentContainerStyle={styles.categoryContainer}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryChip,
-              selectedCategory === category && styles.categoryChipActive,
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text
+      {/* Tab Selector - Full Width */}
+      <View style={styles.tabsWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.tabContainer}
+          contentContainerStyle={styles.tabContent}
+          scrollEventThrottle={16}
+        >
+          {['articles', 'audio', 'exercises'].map((tab) => (
+            <TouchableOpacity
+              key={tab}
               style={[
-                styles.categoryChipText,
-                selectedCategory === category && styles.categoryChipTextActive,
+                styles.tab,
+                selectedTab === tab && styles.tabActive,
               ]}
+              onPress={() => setSelectedTab(tab)}
+              activeOpacity={0.6}
             >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <ScrollView style={styles.resourcesList}>
-        {filteredResources.map((resource) => (
-          <TouchableOpacity
-            key={resource.id}
-            style={styles.resourceCard}
-            onPress={() => setSelectedResource(resource)}
-          >
-            <View style={styles.resourceIconContainer}>
-              <Ionicons
-                name={getResourceIcon(resource.type)}
-                size={32}
-                color={getResourceColor(resource.category)}
-              />
-            </View>
-            <View style={styles.resourceInfo}>
-              <Text style={styles.resourceTitle}>{resource.title}</Text>
-              <View style={styles.resourceMeta}>
-                <View style={styles.metaItem}>
-                  <Ionicons name="time-outline" size={14} color="#666" />
-                  <Text style={styles.metaText}>{resource.duration}</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Ionicons name="pricetag-outline" size={14} color="#666" />
-                  <Text style={styles.metaText}>{resource.category}</Text>
-                </View>
-              </View>
-              <View style={styles.tagContainer}>
-                {resource.tags.map((tag, idx) => (
-                  <View key={idx} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
-          </TouchableOpacity>
-        ))}
-
-        {filteredResources.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No resources found</Text>
-            <Text style={styles.emptySubtext}>
-              Try adjusting your search or filters
-            </Text>
-          </View>
-        )}
-      </ScrollView>
-
-      <Modal
-        visible={selectedResource !== null}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedResource(null)}
-      >
-        {selectedResource && (
-          <ResourceDetail
-            resource={selectedResource}
-            onClose={() => setSelectedResource(null)}
-          />
-        )}
-      </Modal>
-    </View>
-  );
-}
-
-function ResourceDetail({ resource, onClose }: { resource: Resource; onClose: () => void }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  const handlePlay = () => {
-    setIsPlaying(true);
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsPlaying(false);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 200);
-  };
-
-  const handleStop = () => {
-    setIsPlaying(false);
-    setProgress(0);
-  };
-
-  return (
-    <View style={styles.detailContainer}>
-      <View style={styles.detailHeader}>
-        <TouchableOpacity onPress={onClose}>
-          <Ionicons name="close" size={28} color="#1a1a1a" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.detailContent}>
-        <View style={styles.detailIconLarge}>
-          <Ionicons
-            name={getResourceIcon(resource.type)}
-            size={64}
-            color={getResourceColor(resource.category)}
-          />
-        </View>
-
-        <Text style={styles.detailTitle}>{resource.title}</Text>
-        <Text style={styles.detailCategory}>{resource.category}</Text>
-
-        <View style={styles.detailMeta}>
-          <View style={styles.detailMetaItem}>
-            <Ionicons name="time-outline" size={20} color="#666" />
-            <Text style={styles.detailMetaText}>{resource.duration}</Text>
-          </View>
-          <View style={styles.detailMetaItem}>
-            <Ionicons name="language-outline" size={20} color="#666" />
-            <Text style={styles.detailMetaText}>English</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailSection}>
-          <Text style={styles.detailSectionTitle}>What to Expect</Text>
-          <Text style={styles.detailDescription}>
-            This {resource.type} session is designed to help with {resource.tags.join(', ')}.
-            Find a quiet space, use headphones for best results, and allow yourself
-            to relax fully during the session.
-          </Text>
-        </View>
-      </ScrollView>
-
-      <View style={styles.detailFooter}>
-        {!isPlaying ? (
-          <TouchableOpacity style={styles.playButton} onPress={handlePlay}>
-            <Ionicons name="play" size={28} color="#fff" />
-            <Text style={styles.playButtonText}>Start Session</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressText}>{progress}% Complete</Text>
-              <View style={styles.progressBarContainer}>
-                <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-              </View>
-            </View>
-            <TouchableOpacity style={styles.stopButton} onPress={handleStop}>
-              <Ionicons name="stop" size={24} color="#fff" />
-              <Text style={styles.stopButtonText}>Stop</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  selectedTab === tab && styles.tabTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {tab === 'articles' && '📚 Articles'}
+                {tab === 'audio' && '🎧 Audio'}
+                {tab === 'exercises' && '🧘 Exercises'}
+              </Text>
             </TouchableOpacity>
-          </>
-        )}
+          ))}
+        </ScrollView>
       </View>
+
+      {/* Content */}
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
+      >
+        {selectedTab === 'articles' && renderArticles()}
+        {selectedTab === 'audio' && renderAudio()}
+        {selectedTab === 'exercises' && renderExercises()}
+      </ScrollView>
     </View>
   );
-}
+};
 
-function getResourceIcon(type: string): any {
-  const icons: Record<string, any> = {
-    video: 'play-circle',
-    audio: 'musical-notes',
-    article: 'document-text',
-    neuromodulation: 'pulse',
-  };
-  return icons[type] || 'document';
-}
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const scale = SCREEN_WIDTH / 375;
 
-function getResourceColor(category: string): string {
-  const colors: Record<string, string> = {
-    Calm: '#34C759',
-    Focus: '#007AFF',
-    Sleep: '#5856D6',
-  };
-  return colors[category] || '#999';
-}
+const scaleFont = (fontSize: number) => Math.round(fontSize * scale);
+const scaleSize = (size: number) => Math.round(size * scale);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#0F172A',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#fff',
+    paddingHorizontal: scaleSize(20),
+    paddingVertical: scaleSize(14),
+    paddingTop: scaleSize(16),
+    backgroundColor: '#0F172A',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
+    borderBottomColor: '#1E293B',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: scaleFont(28),
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: scaleSize(2),
   },
-  placeholder: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: scaleFont(13),
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  searchBarContainer: {
+    paddingHorizontal: scaleSize(16),
+    paddingVertical: scaleSize(12),
+    backgroundColor: '#0F172A',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    margin: 20,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 12,
-    elevation: 2,
+    paddingHorizontal: scaleSize(14),
+    backgroundColor: '#1E293B',
+    borderRadius: scaleSize(14),
+    borderWidth: 1,
+    borderColor: '#334155',
+    height: scaleSize(44),
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#1a1a1a',
+    marginHorizontal: scaleSize(10),
+    color: '#fff',
+    fontSize: scaleFont(14),
+    fontWeight: '500',
   },
-  categoryScroll: {
-    maxHeight: 50,
+  tabsWrapper: {
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
   },
-  categoryContainer: {
-    paddingHorizontal: 20,
-    gap: 8,
+  tabContainer: {
+    flexGrow: 0,
   },
-  categoryChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+  tabContent: {
+    paddingHorizontal: scaleSize(12),
+    paddingVertical: scaleSize(8),
+    gap: scaleSize(8),
+  },
+  tab: {
+    paddingHorizontal: scaleSize(14),
+    paddingVertical: scaleSize(8),
+    borderRadius: scaleSize(20),
+    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#334155',
+    minWidth: scaleSize(95),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  categoryChipActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+  tabActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
   },
-  categoryChipText: {
-    fontSize: 14,
+  tabText: {
+    fontSize: scaleFont(12),
     fontWeight: '600',
-    color: '#666',
+    color: '#94A3B8',
   },
-  categoryChipTextActive: {
+  tabTextActive: {
     color: '#fff',
   },
-  resourcesList: {
+  content: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#0F172A',
   },
-  resourceCard: {
-    flexDirection: 'row',
+  contentContainer: {
+    paddingHorizontal: scaleSize(16),
+    paddingVertical: scaleSize(12),
+  },
+  listContent: {
+    paddingVertical: scaleSize(4),
+  },
+  filtersWrapper: {
+    marginBottom: scaleSize(12),
+  },
+  filtersContainer: {
+    flexGrow: 0,
+  },
+  filtersContent: {
+    paddingVertical: scaleSize(6),
+    gap: scaleSize(8),
+  },
+  filterChip: {
+    paddingHorizontal: scaleSize(14),
+    paddingVertical: scaleSize(8),
+    borderRadius: scaleSize(18),
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    minWidth: scaleSize(70),
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
+    justifyContent: 'center',
   },
-  resourceIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f5f5f5',
+  filterChipActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  filterText: {
+    fontSize: scaleFont(12),
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  filterTextActive: {
+    color: '#fff',
+  },
+  articleCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E293B',
+    borderRadius: scaleSize(14),
+    padding: scaleSize(14),
+    marginBottom: scaleSize(12),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  articleIcon: {
+    width: scaleSize(56),
+    height: scaleSize(56),
+    borderRadius: scaleSize(12),
+    backgroundColor: '#334155',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: scaleSize(12),
+    flexShrink: 0,
   },
-  resourceInfo: {
+  iconText: {
+    fontSize: scaleFont(26),
+  },
+  articleContent: {
     flex: 1,
+    marginRight: scaleSize(8),
   },
-  resourceTitle: {
-    fontSize: 16,
+  articleTitle: {
+    fontSize: scaleFont(13),
     fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 6,
+    color: '#fff',
+    marginBottom: scaleSize(6),
   },
-  resourceMeta: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 8,
-  },
-  metaItem: {
+  articleMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scaleSize(6),
   },
-  metaText: {
-    fontSize: 13,
-    color: '#666',
+  categoryBadge: {
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(4),
+    backgroundColor: '#334155',
+    borderRadius: scaleSize(6),
   },
-  tagContainer: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  tag: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 11,
-    color: '#666',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
+  categoryBadgeText: {
+    fontSize: scaleFont(10),
     fontWeight: '600',
+    color: '#94A3B8',
+  },
+  durationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scaleSize(3),
+  },
+  durationText: {
+    fontSize: scaleFont(10),
     color: '#999',
-    marginTop: 16,
+    fontWeight: '500',
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#ccc',
-    marginTop: 8,
+  sectionTitle: {
+    fontSize: scaleFont(15),
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: scaleSize(10),
+    marginTop: scaleSize(6),
   },
-  detailContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
+  playlistCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: scaleSize(14),
+    padding: scaleSize(14),
+    marginBottom: scaleSize(12),
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  detailHeader: {
-    padding: 20,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  detailContent: {
-    flex: 1,
-    padding: 24,
-  },
-  detailIconLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  detailTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  detailCategory: {
-    fontSize: 16,
-    color: '#007AFF',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  detailMeta: {
+  playlistHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 32,
-    marginBottom: 32,
-  },
-  detailMetaItem: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: scaleSize(10),
   },
-  detailMetaText: {
-    fontSize: 15,
-    color: '#666',
+  playlistName: {
+    fontSize: scaleFont(14),
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: scaleSize(2),
+    flex: 1,
   },
-  detailSection: {
-    marginBottom: 24,
+  playlistInfo: {
+    fontSize: scaleFont(11),
+    color: '#999',
+    fontWeight: '500',
   },
-  detailSectionTitle: {
-    fontSize: 18,
+  audiosLabel: {
+    fontSize: scaleFont(11),
+    color: '#999',
     fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 12,
+    marginBottom: scaleSize(8),
+    marginTop: scaleSize(6),
   },
-  detailDescription: {
-    fontSize: 15,
-    color: '#333',
-    lineHeight: 24,
+  audioItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: scaleSize(6),
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
   },
-  detailFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+  audioName: {
+    fontSize: scaleFont(11),
+    color: '#CBD5E1',
+    fontWeight: '500',
+    marginLeft: scaleSize(6),
+    flex: 1,
   },
   playButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: scaleSize(12),
+    paddingVertical: scaleSize(10),
+    borderRadius: scaleSize(10),
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
+    alignItems: 'center',
   },
   playButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: scaleFont(12),
+    fontWeight: '700',
+  },
+  exerciseCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E293B',
+    borderRadius: scaleSize(14),
+    padding: scaleSize(14),
+    marginBottom: scaleSize(12),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  exerciseIcon: {
+    width: scaleSize(56),
+    height: scaleSize(56),
+    borderRadius: scaleSize(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: scaleSize(12),
+    opacity: 0.15,
+    flexShrink: 0,
+  },
+  exerciseContent: {
+    flex: 1,
+    marginRight: scaleSize(8),
+  },
+  exerciseTitle: {
+    fontSize: scaleFont(13),
     fontWeight: '600',
+    color: '#fff',
+    marginBottom: scaleSize(6),
   },
-  progressInfo: {
-    marginBottom: 16,
-  },
-  progressText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#007AFF',
-  },
-  stopButton: {
+  exerciseMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FF3B30',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
+    gap: scaleSize(6),
   },
-  stopButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  difficultyBadge: {
+    paddingHorizontal: scaleSize(8),
+    paddingVertical: scaleSize(4),
+    borderRadius: scaleSize(6),
+    opacity: 0.2,
+  },
+  difficultyText: {
+    fontSize: scaleFont(10),
     fontWeight: '600',
+    color: '#fff',
   },
 });
+
+export default ResourceHubScreen;

@@ -6,7 +6,7 @@
 import apiService from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Linking,
@@ -17,6 +17,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import ScreeningModal from './screens/ScreeningModal';
 
 // SPEC: Constants for accessibility
 const MIN_TAP_TARGET_PX = 44;
@@ -25,12 +26,12 @@ const MIN_TAP_TARGET_PX = 44;
 const i18n = {
   en: {
     'home.welcome': 'Welcome',
-    'home.tip': 'Tip of the day: Take a 5-minute break to stay focused.',
+    'home.tip': 'Fill the mandatory Questionnaire',
     'home.attendance': 'Mark Attendance',
     'home.attendance.subtitle': 'Quick and easy face check-in',
     'home.tools': 'Your Tools',
-    'home.focus': 'Focus & Calm',
-    'home.focus.subtitle': 'Guided neuromodulation sessions',
+    'home.focus': 'Neuromodulation',
+    'home.focus.subtitle': 'Guided Self Healing Technology',
     'home.resources': 'Resource Hub',
     'home.resources.subtitle': 'Calming • Sleep • Focus • Study tracks',
     'home.community': 'Anonymous Community',
@@ -46,8 +47,8 @@ const i18n = {
     'home.attendance': 'उपस्थिति दर्ज करें',
     'home.attendance.subtitle': 'त्वरित और आसान फेस चेक-इन',
     'home.tools': 'आपके उपकरण',
-    'home.focus': 'फोकस और शांति',
-    'home.focus.subtitle': 'मार्गदर्शित न्यूरोमॉड्यूलेशन सत्र',
+    'home.focus': 'न्यूरोमॉड्यूलेशन',
+    'home.focus.subtitle': 'निर्देशित स्व-उपचार प्रौद्योगिकी',
     'home.resources': 'रिसोर्स हब',
     'home.resources.subtitle': 'शांति • नींद • ध्यान • अध्ययन',
     'home.community': 'अनाम समुदाय',
@@ -148,7 +149,7 @@ export default function StudentHomeDashboard() {
 
   const handleFocusCalmTap = () => {
     emitAnalyticsEvent('evt_home_focuscalm_tap');
-    router.push('/screens/Resources');
+    router.push('/screens/NeuromodulationScreen');
   };
 
   const handleResourceHubTap = () => {
@@ -173,6 +174,10 @@ export default function StudentHomeDashboard() {
 
   const handleProfileTap = () => {
     router.push('/screens/PrivacySettings');
+  };
+  const handleTipTap = () => {
+    router.push('/screens/ScreeningModal');
+    setShowTip(false)
   };
 
   const handleEmergencyTap = () => {
@@ -225,8 +230,12 @@ export default function StudentHomeDashboard() {
 
         {/* SPEC: home_daily_tip_section */}
         {showTip && (
-          <View
+          <TouchableOpacity
+          onPress={handleTipTap}
+          >
+            <View
             testID="home_daily_tip_banner"
+            
             style={styles.tipBanner}
             accessible={true}
           >
@@ -235,7 +244,7 @@ export default function StudentHomeDashboard() {
               <Text style={styles.tipText}>{t('home.tip')}</Text>
             </View>
             <TouchableOpacity
-              onPress={() => setShowTip(false)}
+              // onPress={handleTipTap}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessible={true}
               accessibilityLabel="Dismiss tip"
@@ -244,6 +253,9 @@ export default function StudentHomeDashboard() {
               <Ionicons name="close" size={20} color="#666" />
             </TouchableOpacity>
           </View>
+          </TouchableOpacity>
+          
+          
         )}
 
         {/* SPEC: home_primary_feature_section - Attendance Card (HIGHEST PRIORITY) */}
@@ -293,7 +305,7 @@ export default function StudentHomeDashboard() {
               title={t('home.focus')}
               subtitle={t('home.focus.subtitle')}
               onPress={handleFocusCalmTap}
-              accessibilityLabel="Focus & Calm button"
+              accessibilityLabel="Neuromodulation button"
             />
 
             {/* SPEC: home_tool_resource_hub */}

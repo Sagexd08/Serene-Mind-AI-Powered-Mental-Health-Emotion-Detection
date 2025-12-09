@@ -72,6 +72,12 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="screens/NeuromodulationScreen"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="screens/MyActivity"
           options={{
             headerShown: false,
@@ -91,12 +97,6 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="screens/ScreeningModal"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="screens/ResourceHubScreen"
           options={{
             headerShown: false,
           }}
