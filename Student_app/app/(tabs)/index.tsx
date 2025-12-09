@@ -27,11 +27,11 @@ export default function HomeScreen() {
 
       if (!authenticated) {
         // Redirect to login if not authenticated
-        router.replace("../login" as any);
+        router.replace("../login");
       }
     } catch (error) {
       console.error("Authentication check error:", error);
-      router.replace("../login" as any);
+      router.replace("../login");
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           await apiService.clearAuthTokens();
-          router.replace("../login" as any);
+          router.replace("../login");
         },
       },
     ]);

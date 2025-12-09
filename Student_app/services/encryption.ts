@@ -47,8 +47,9 @@ class EncryptionService {
       return combined.toString(CryptoJS.enc.Base64);
     } catch (error) {
       console.error('Encryption error details:', error);
-      // @ts-ignore
-      if (error.message) console.error('Error message:', error.message);
+      if (error instanceof Error && error.message) {
+        console.error('Error message:', error.message);
+      }
       throw new Error('Failed to encrypt image data: ' + (error instanceof Error ? error.message : String(error)));
     }
   }

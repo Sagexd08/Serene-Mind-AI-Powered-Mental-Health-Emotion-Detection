@@ -16,7 +16,16 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 export const app = express();
 
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS with allowed origins from environment
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000').split(',');
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(requestLogger);
 
 app.use("/", homeRouter);

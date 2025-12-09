@@ -99,8 +99,8 @@ class ApiService {
             console.error("Token refresh failed:", refreshError);
             // Logout if refresh fails
             await this.clearAuthTokens();
-            // TODO: Ideally redirect to login, but we can't access router here easily. 
-            // The UI will detect the missing token on next check.
+            // Note: Router redirect is handled by the UI layer (RootLayout)
+            // which detects the missing token and redirects to login automatically.
           }
         }
         return Promise.reject(error);

@@ -4,9 +4,15 @@ import { AccessToken } from 'livekit-server-sdk';
 const router: Router = express.Router();
 
 // Initialize LiveKit credentials from environment
-const LIVEKIT_URL = process.env.LIVEKIT_URL || 'wss://emotech-38dj94si.livekit.cloud';
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || 'APISsXCJFjf8JW4';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || 'a4p9grtgakKGIqJqeMDGcSocsVVHeifYh53QMqzG00RA';
+const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+
+// Validate required environment variables
+if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
+  console.error('Missing required LiveKit environment variables: LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET');
+  process.exit(1);
+}
 
 /**
  * Generate LiveKit access token for a participant
