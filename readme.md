@@ -1,5 +1,8 @@
 # 🧠 Model Trainer: CNN-Based Image Classification
 
+> **⚠️ IMPORTANT: Production Readiness**
+> Please refer to [PROBLEMS.md](./PROBLEMS.md) for a list of known issues and configuration steps required before deploying this project to production.
+
 ## Sequence Diagram
 
 ```mermaid
