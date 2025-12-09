@@ -44,7 +44,12 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of userStatements) {
-        await db.run(stmt);
+        try {
+          await db.run(stmt);
+        } catch (err) {
+          // Table might already exist, continue
+          console.log("User schema:", err instanceof Error ? err.message : String(err));
+        }
       }
       console.log("✓ Users table created/verified");
 
@@ -53,7 +58,11 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of refreshTokenStatements) {
-        await db.run(stmt);
+        try {
+          await db.run(stmt);
+        } catch (err) {
+          console.log("Refresh token schema:", err instanceof Error ? err.message : String(err));
+        }
       }
       console.log("✓ Refresh tokens table created/verified");
 
@@ -62,7 +71,11 @@ export async function initializeDatabase(): Promise<void> {
         .filter((stmt) => stmt.trim().length > 0);
 
       for (const stmt of decryptionWindowStatements) {
-        await db.run(stmt);
+        try {
+          await db.run(stmt);
+        } catch (err) {
+          console.log("Decryption window schema:", err instanceof Error ? err.message : String(err));
+        }
       }
       console.log("✓ Decryption window table created/verified");
     }

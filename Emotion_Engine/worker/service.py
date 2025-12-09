@@ -14,6 +14,9 @@ from storage import KeyStorage
 from request_queue import RequestQueue
 from model_loader import EmotionRecognitionModel
 
+# Resolve model path relative to this file so it works regardless of CWD
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "model_v1.pth")
+
 class EmotionService(interface_pb2_grpc.EmotionServiceServicer):
     def __init__(self, queue: RequestQueue, storage: KeyStorage):
         self.queue = queue
@@ -51,7 +54,7 @@ class EmotionService(interface_pb2_grpc.EmotionServiceServicer):
 async def serve():
     # Initialize components
     storage = KeyStorage()
-    model = EmotionRecognitionModel(path="models/model_v1.pth") # Adjust path as needed
+    model = EmotionRecognitionModel(path=MODEL_PATH)
     # We need to load the model. Since model.load is async, we do it here.
     
     print("Loading model...")
@@ -71,7 +74,9 @@ async def serve():
     interface_pb2_grpc.add_EmotionServiceServicer_to_server(
         EmotionService(queue, storage), server
     )
-    server.add_insecure_port("[::]:50051")
+    bound = server.add_insecure_port("0.0.0.0:50051")
+    if bound == 0:
+        raise RuntimeError("Failed to bind to port 50051 on 0.0.0.0")
     print("gRPC server running on port 50051")
     
     await server.start()

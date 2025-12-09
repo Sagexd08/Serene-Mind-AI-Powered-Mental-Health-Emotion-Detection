@@ -128,11 +128,6 @@ class GeminiService {
     } catch (error) {
       console.error("Gemini generation error:", error);
       
-      // If error occurs, we DO NOT commit the user message to history, 
-      // so the user can try again without creating a double-user-message state.
-      // OR we could commit a fallback model response. 
-      // Current decision: Do not commit. Next try will send the message again.
-      
       return {
         message: "I'm having trouble connecting right now. Please check your internet connection.",
         actions: [],

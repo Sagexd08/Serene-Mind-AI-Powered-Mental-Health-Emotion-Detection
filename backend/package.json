@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && mkdir dist\\proto 2>nul & copy src\\proto\\*.proto dist\\proto\\",
+    "build": "tsc && node ./scripts/copy-proto.mjs",
     "start": "node ./dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
     "test": "jest",
     "test:api": "node test-api.js",
     "lint": "eslint .",
-    "setup-db": "node --loader ts-node/esm src/scripts/setup-db.ts"
+    "setup-db": "node --loader ts-node/esm src/scripts/setup-db.ts",
+    "copy:proto": "node ./scripts/copy-proto.mjs"
   },
   "variant": "typescript",
   "framework": "express",

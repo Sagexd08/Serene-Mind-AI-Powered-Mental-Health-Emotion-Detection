@@ -25,6 +25,42 @@ export interface VoiceMessage {
   mood?: string;
 }
 
+export interface JoinRequestBody {
+  roomType?: 'ai_live' | 'human_handoff';
+  roomName?: string;
+  sessionPreferences?: {
+    ephemeral?: boolean;
+    transcribe?: boolean;
+    record?: boolean;
+  };
+  metadata?: Record<string, any>;
+}
+
+export interface JoinResponse {
+  success: boolean;
+  livekitToken: string;
+  roomName: string;
+  mode: string;
+  url: string;
+  error?: string;
+}
+
+export interface HandoffRequest {
+  reason?: string;
+  preferredMode?: 'immediate' | 'schedule' | 'callback' | string;
+  scheduleTime?: string;
+  includeTranscript?: boolean;
+}
+
+export interface HandoffResponse {
+  handoffId: string;
+  status: string;
+  estimatedWait?: number | null;
+  error?: string;
+}
+  mood?: string;
+}
+
 class LiveKitService {
   private axiosInstance: AxiosInstance;
 
@@ -123,6 +159,54 @@ class LiveKitService {
    */
   createUsername(studentId: string): string {
     return `student-${studentId}-${Date.now()}`;
+  }
+
+  /**
+   * Join LiveKit session via backend /api/livekit/join
+   */
+  async joinSession(body: JoinRequestBody): Promise<JoinResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await this.axiosInstance.post<JoinResponse>(
+        '/api/livekit/join',
+        body,
+        { headers }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Error joining LiveKit session:', error);
+      return {
+        success: false,
+        livekitToken: '',
+        roomName: '',
+        mode: body.roomType || 'ai_live',
+        url: '',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Request human handoff
+   */
+  async requestHandoff(body: HandoffRequest): Promise<HandoffResponse> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await this.axiosInstance.post<HandoffResponse>(
+        '/api/handoff/request',
+        body,
+        { headers }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Error requesting handoff:', error);
+      return {
+        handoffId: '',
+        status: 'error',
+        estimatedWait: null,
+        error: error.message,
+      };
+    }
   }
 }
 

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { livekitService } from '@/services/livekit';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -38,12 +38,13 @@ interface VoiceMessage {
 
 export default function LiveKitVoiceChat() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   // State
-  const [token, setToken] = useState<string>('');
-  const [url, setUrl] = useState<string>('');
-  const [roomName, setRoomName] = useState<string>('');
-  const [isConnecting, setIsConnecting] = useState(true);
+  const [token, setToken] = useState<string>((params.token as string) || '');
+  const [url, setUrl] = useState<string>((params.url as string) || '');
+  const [roomName, setRoomName] = useState<string>((params.roomName as string) || '');
+  const [isConnecting, setIsConnecting] = useState(!params.token);
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -59,6 +60,13 @@ export default function LiveKitVoiceChat() {
   useEffect(() => {
     const initializeVoiceChat = async () => {
       try {
+        if (token && url && roomName) {
+          setIsConnecting(false);
+          setIsConnected(true);
+          setAiState('listening');
+          return;
+        }
+
         setIsConnecting(true);
         setError(null);
 

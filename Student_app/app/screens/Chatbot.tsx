@@ -10,10 +10,13 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    Linking
+  View,
+  Linking,
+  Modal,
+  Switch,
 } from 'react-native';
 import geminiService from '@/services/gemini';
+import livekitService, { HandoffResponse } from '@/services/livekit';
 
 interface Message {
   id: string;
@@ -54,6 +57,18 @@ export default function Chatbot() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [mode, setMode] = useState<'chat' | 'ai_live'>('chat');
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showHandoffModal, setShowHandoffModal] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [handoffLoading, setHandoffLoading] = useState(false);
+  const [preferences, setPreferences] = useState({
+    ephemeral: true,
+    transcribe: false,
+    record: false,
+  });
+  const [handoffStatus, setHandoffStatus] = useState<HandoffResponse | null>(null);
+  const [handoffReason, setHandoffReason] = useState('I want to talk to a human');
 
   useEffect(() => {
     // Reset AI history when chat opens
@@ -150,6 +165,57 @@ export default function Chatbot() {
     }
   };
 
+  const openLiveJoin = () => {
+    setMode('ai_live');
+    setShowJoinModal(true);
+  };
+
+  const openHumanHandoff = () => {
+    setShowHandoffModal(true);
+  };
+
+  const joinLiveSession = async () => {
+    setJoinLoading(true);
+    try {
+      const response = await livekitService.joinSession({
+        roomType: 'ai_live',
+        sessionPreferences: preferences,
+      });
+      if (!response.success) throw new Error(response.error || 'Unable to join');
+
+      setShowJoinModal(false);
+      router.push({
+        pathname: '/screens/LiveKitVoiceChat',
+        params: {
+          token: response.livekitToken,
+          url: response.url,
+          roomName: response.roomName,
+        },
+      });
+    } catch (err: any) {
+      Alert.alert('Live session error', err.message || 'Could not start live session');
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
+  const requestHandoff = async (preferredMode: 'immediate' | 'schedule' | 'callback') => {
+    setHandoffLoading(true);
+    try {
+      const resp = await livekitService.requestHandoff({
+        reason: handoffReason,
+        preferredMode,
+        includeTranscript: false,
+      });
+      setHandoffStatus(resp);
+      if (!resp.handoffId) throw new Error(resp.error || 'Failed to create handoff');
+    } catch (err: any) {
+      Alert.alert('Handoff error', err.message || 'Could not start human handoff');
+    } finally {
+      setHandoffLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -167,16 +233,34 @@ export default function Chatbot() {
           </View>
         </View>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity 
-            onPress={() => router.push('/screens/LiveKitVoiceChat')}
-            style={styles.voiceButton}
-          >
+          <TouchableOpacity onPress={openLiveJoin} style={styles.voiceButton}>
             <Ionicons name="mic-circle" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <Ionicons name="information-circle-outline" size={24} color="#666" />
+          <TouchableOpacity onPress={openHumanHandoff}>
+            <Ionicons name="person" size={24} color="#d97706" />
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.modeSelector}>
+        <TouchableOpacity
+          style={[styles.modeChip, mode === 'ai_live' && styles.modeChipActive]}
+          onPress={openLiveJoin}
+        >
+          <Text style={[styles.modeChipText, mode === 'ai_live' && styles.modeChipTextActive]}>Talk to AI Live</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeChip, mode === 'chat' && styles.modeChipActive]}
+          onPress={() => setMode('chat')}
+        >
+          <Text style={[styles.modeChipText, mode === 'chat' && styles.modeChipTextActive]}>Continue in Chatbot</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modeChip}
+          onPress={openHumanHandoff}
+        >
+          <Text style={styles.modeChipText}>Talk to Human</Text>
+        </TouchableOpacity>
       </View>
 
       {messages.length === 1 && (
@@ -250,6 +334,79 @@ export default function Chatbot() {
           For urgent help, contact emergency services.
         </Text>
       </View>
+
+      {/* Live session join modal */}
+      <Modal visible={showJoinModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Join Live AI Session</Text>
+            <Text style={styles.modalSub}>Mic & camera stay off until you enable them. Recording and transcription are off unless you opt in.</Text>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Ephemeral mode (no transcript saved)</Text>
+              <Switch
+                value={preferences.ephemeral}
+                onValueChange={(val) => setPreferences((p) => ({ ...p, ephemeral: val }))}
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Enable captions/transcription</Text>
+              <Switch
+                value={preferences.transcribe}
+                onValueChange={(val) => setPreferences((p) => ({ ...p, transcribe: val }))}
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Allow recording</Text>
+              <Switch
+                value={preferences.record}
+                onValueChange={(val) => setPreferences((p) => ({ ...p, record: val }))}
+              />
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowJoinModal(false)} disabled={joinLoading}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalPrimary} onPress={joinLiveSession} disabled={joinLoading}>
+                <Text style={styles.modalPrimaryText}>{joinLoading ? 'Joining...' : 'Join Live Session'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Human handoff modal */}
+      <Modal visible={showHandoffModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Talk to a Human</Text>
+            <Text style={styles.modalSub}>We can connect you to a counselor or schedule a time. Your transcript is not shared unless you consent later.</Text>
+            <View style={{ gap: 8, marginTop: 12 }}>
+              <TouchableOpacity style={styles.modalPrimary} onPress={() => requestHandoff('immediate')} disabled={handoffLoading}>
+                <Text style={styles.modalPrimaryText}>{handoffLoading ? 'Connecting...' : 'Connect now'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSecondary} onPress={() => requestHandoff('schedule')} disabled={handoffLoading}>
+                <Text style={styles.modalSecondaryText}>Schedule</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSecondary} onPress={() => requestHandoff('callback')} disabled={handoffLoading}>
+                <Text style={styles.modalSecondaryText}>Request callback</Text>
+              </TouchableOpacity>
+            </View>
+            {handoffStatus && (
+              <View style={styles.handoffStatusBox}>
+                <Text style={styles.handoffStatusTitle}>Status: {handoffStatus.status}</Text>
+                {handoffStatus.estimatedWait ? (
+                  <Text style={styles.handoffStatusSub}>Estimated wait: ~{handoffStatus.estimatedWait} seconds</Text>
+                ) : null}
+              </View>
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowHandoffModal(false)} disabled={handoffLoading}>
+                <Text style={styles.modalCancelText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -338,6 +495,38 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 13,
     color: '#34C759',
+  },
+  modeSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    gap: 8,
+  },
+  modeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: '#f0f4ff',
+    alignItems: 'center',
+  },
+  modeChipActive: {
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#2563eb',
+  },
+  modeChipText: {
+    color: '#1e3a8a',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modeChipTextActive: {
+    color: '#0b63f6',
   },
   quickPromptsScroll: {
     maxHeight: 60,
@@ -490,6 +679,93 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalSub: {
+    fontSize: 14,
+    color: '#4b5563',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    color: '#1f2937',
+    flex: 1,
+    paddingRight: 12,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#e5e7eb',
+  },
+  modalCancelText: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  modalPrimary: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+  },
+  modalPrimaryText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  modalSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+  },
+  modalSecondaryText: {
+    color: '#3730a3',
+    fontWeight: '600',
+  },
+  handoffStatusBox: {
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  handoffStatusTitle: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  handoffStatusSub: {
+    color: '#4b5563',
+    marginTop: 4,
   },
   voiceButton: {
     padding: 8,
