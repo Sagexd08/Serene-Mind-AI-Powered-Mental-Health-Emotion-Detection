@@ -27,6 +27,11 @@ export async function initializeDatabase(): Promise<void> {
       "utf8"
     );
 
+    const handoffSchema = fs.readFileSync(
+      path.join(process.cwd(), "src", "schemas", "handoff.sql"),
+      "utf8"
+    );
+
     // Execute schema creation
     if (db.driver === "postgres") {
       await db.query(userSchema);
@@ -37,6 +42,9 @@ export async function initializeDatabase(): Promise<void> {
 
       await db.query(decryptionWindowSchema);
       console.log("✓ Decryption window table created/verified");
+
+      await db.query(handoffSchema);
+      console.log("✓ Handoffs table created/verified");
     } else if (db.driver === "sqlite") {
       // Split by semicolon for multiple statements
       const userStatements = userSchema
@@ -78,6 +86,19 @@ export async function initializeDatabase(): Promise<void> {
         }
       }
       console.log("✓ Decryption window table created/verified");
+
+      const handoffStatements = handoffSchema
+        .split(";")
+        .filter((stmt) => stmt.trim().length > 0);
+
+      for (const stmt of handoffStatements) {
+        try {
+          await db.run(stmt);
+        } catch (err) {
+          console.log("Handoff schema:", err instanceof Error ? err.message : String(err));
+        }
+      }
+      console.log("✓ Handoffs table created/verified");
     }
 
     console.log("Database initialization completed successfully!");

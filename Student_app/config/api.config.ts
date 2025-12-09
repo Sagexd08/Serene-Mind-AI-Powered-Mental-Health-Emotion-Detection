@@ -13,11 +13,11 @@ const API_CONFIG = {
 
   TIMEOUT: 30000,
   
-  GEMINI_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "AIzaSyBsPXfUCh4jpYe1rrZJc_Qc2NK9mPJ8isQ",
+  GEMINI_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_API_KEY || "",
   GEMINI_MODEL: process.env.EXPO_PUBLIC_GEMINI_MODEL || "gemini-2.5-flash",
   
-  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || "https://uceaqjofeavrmpbsshzs.supabase.co",
-  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_s-9hmcbD0jN1L2V5rTER_w_pOMOPZqF",
+  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || "",
+  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "",
 
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,

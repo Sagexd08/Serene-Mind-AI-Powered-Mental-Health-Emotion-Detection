@@ -81,7 +81,7 @@ class GeminiService {
       // Since we control push events, it should be valid, but we handle the current turn here.
       const conversationHistory = [...this.history, userContent];
 
-      console.log("Sending to Gemini:", JSON.stringify(conversationHistory, null, 2));
+      // console.log("Sending to Gemini:", JSON.stringify(conversationHistory, null, 2));
 
       const response = await this.client.models.generateContent({
         model: API_CONFIG.GEMINI_MODEL,
