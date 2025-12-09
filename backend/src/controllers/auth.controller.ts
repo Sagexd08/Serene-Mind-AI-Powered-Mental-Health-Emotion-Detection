@@ -21,6 +21,12 @@ import { AuthRequest } from "../middlewares/auth.middleware.js";
 // LOGIN
 async function getLogin(req: Request, res: Response): Promise<void> {
   try {
+    // Validate request body exists
+    if (!req.body) {
+      res.status(400).json({ error: "Request body is required" });
+      return;
+    }
+
     const { userId, userPass } = req.body;
 
     if (!userId || !userPass) {
@@ -58,6 +64,12 @@ async function getLogin(req: Request, res: Response): Promise<void> {
 // REGISTER
 async function getRegister(req: Request, res: Response): Promise<void> {
   try {
+    // Validate request body exists
+    if (!req.body) {
+      res.status(400).json({ error: "Request body is required" });
+      return;
+    }
+
     const { userId, userPass } = req.body;
 
     if (!userId || !userPass) {
@@ -96,6 +108,12 @@ async function getRegister(req: Request, res: Response): Promise<void> {
 // REFRESH ACCESS TOKEN
 async function getRefresh(req: Request, res: Response): Promise<void> {
   try {
+    // Validate request body exists
+    if (!req.body) {
+      res.status(400).json({ error: "Request body is required" });
+      return;
+    }
+
     const { refreshToken } = req.body;
 
     if (!refreshToken) {

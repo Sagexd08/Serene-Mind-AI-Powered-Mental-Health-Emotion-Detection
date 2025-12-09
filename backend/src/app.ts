@@ -15,7 +15,9 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 
 export const app = express();
 
-app.use(express.json());
+// Configure JSON parser with size limit
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Configure CORS with allowed origins from environment
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000').split(',');
