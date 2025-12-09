@@ -50,3 +50,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 websockets==15.0.1
 yarl==1.22.0
+
+# LiveKit Agent dependencies (v1.2+)
+livekit-agents[silero,google]~=1.2
+python-dotenv~=1.0

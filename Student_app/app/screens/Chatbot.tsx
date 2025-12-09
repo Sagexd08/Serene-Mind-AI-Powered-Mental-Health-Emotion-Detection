@@ -166,9 +166,17 @@ export default function Chatbot() {
             <Text style={styles.statusText}>Online</Text>
           </View>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="information-circle-outline" size={24} color="#666" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity 
+            onPress={() => router.push('/screens/LiveKitVoiceChat')}
+            style={styles.voiceButton}
+          >
+            <Ionicons name="mic-circle" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <Ionicons name="information-circle-outline" size={24} color="#666" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {messages.length === 1 && (
@@ -482,5 +490,10 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     lineHeight: 16,
+  },
+  voiceButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
