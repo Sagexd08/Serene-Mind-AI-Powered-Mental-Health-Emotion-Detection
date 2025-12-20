@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F4F7F6; /* Soft mint/grey off-white */
+  --foreground: #2C3E50; /* Dark slate blue for text, softer than black */
+  
+  /* Palette */
+  --primary: #5D9CEC; /* Calm Blue */
+  --primary-light: #AABEE3;
+  --secondary: #48CFAD; /* Mint Green */
+  --accent: #FFCE54; /* Warm Yellow */
+  --danger: #ED5565; /* Soft Red (avoid harsh triggers) */
+  --card: #FFFFFF;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased;
+    font-family: 'Inter', sans-serif; /* Setup required in layout */
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[var(--primary)] text-white px-6 py-3 rounded-full font-medium transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-blue-500/20;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-[var(--foreground)] border border-gray-200 px-6 py-3 rounded-full font-medium transition-all hover:bg-gray-50;
+  }
+
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-xl rounded-3xl;
+  }
+  
+  .heading-xl {
+    @apply text-4xl md:text-5xl font-bold tracking-tight text-[var(--foreground)];
+  }
+}
