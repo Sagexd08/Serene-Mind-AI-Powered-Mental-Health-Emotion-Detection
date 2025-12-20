@@ -6,7 +6,7 @@ The system is designed to act as a hybrid serverless/microservices architecture 
 
 ```mermaid
 graph TD
-    User[User (Browser/Mobile)] -->|HTTPS| CF[CloudFront CDN]
+    User["User (Browser/Mobile)"] -->|HTTPS| CF[CloudFront CDN]
     CF -->|Static Assets| S3[S3 Bucket (Frontend)]
     User -->|API Requests| APIG[API Gateway]
     

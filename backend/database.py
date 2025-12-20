@@ -5,7 +5,7 @@ from botocore.exceptions import ClientError
 
 # Use ENV variables for config
 TABLE_NAME = os.environ.get("EMOTION_LOGS_TABLE", "SereneMind_Data_Logs")
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+REGION = os.environ.get("APP_AWS_REGION") or os.environ.get("AWS_REGION", "us-east-1")
 
 class DatabaseService:
     def __init__(self, mock=True):

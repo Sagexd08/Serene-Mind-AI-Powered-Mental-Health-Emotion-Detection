@@ -8,6 +8,30 @@ SereneMind is a **privacy-first**, anonymous-by-default mental health tracking s
 - **On-Device First**: We aim to process as much as possible privately.
 - **Multimodal**: Analyzes Text (NLP), Voice (Audio), and Facial Expressions.
 
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework:** Next.js 16 (React 19)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS, Framer Motion (Animations)
+- **Visualization:** Recharts
+- **Icons:** Lucide React
+- **Authentication:** Clerk
+
+### Backend & ML
+- **Framework:** FastAPI (Python)
+- **ML Framework:** PyTorch
+- **NLP:** Hugging Face Transformers
+- **Audio Processing:** Librosa, OpenSmile
+- **Computer Vision:** OpenCV, Facenet-PyTorch
+- **Serverless Adapter:** Mangum
+
+### Infrastructure (AWS)
+- **Compute:** AWS Lambda, EC2
+- **Storage:** S3 (Object Storage), DynamoDB (NoSQL)
+- **Networking:** CloudFront (CDN), API Gateway
+- **Containerization:** Docker
+
 ## 🏗️ System Architecture & Workflow
 
 ![System Workflow](./41598_2025_89202_Fig1_HTML.png)
@@ -18,7 +42,7 @@ The system is designed to act as a hybrid serverless/microservices architecture 
 
 ```mermaid
 graph TD
-    User[User (Browser/Mobile)] -->|HTTPS| CF[CloudFront CDN]
+    User["User (Browser/Mobile)"] -->|HTTPS| CF[CloudFront CDN]
     CF -->|Static Assets| S3[S3 Bucket (Frontend)]
     User -->|API Requests| APIG[API Gateway]
     

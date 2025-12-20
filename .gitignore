@@ -51,6 +51,10 @@ ml_models/checkpoints/
 *.crt
 *.p12
 config/secrets.json
+backend/api_keys.py
+
+# Lambda Package (Build Artifacts)
+lambda_package/
 
 # IDEs
 .vscode/
