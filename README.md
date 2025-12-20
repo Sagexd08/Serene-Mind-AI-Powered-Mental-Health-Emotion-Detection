@@ -18,11 +18,6 @@
 ---
 
 > **⚠️ Medical Disclaimer:** SereneMind is an emotional support and self-reflection tool, **NOT a medical device or diagnostic tool**. It does not provide medical diagnoses, treatment recommendations, or substitute professional mental health care. **If you are experiencing a mental health crisis, please contact your local emergency services immediately** or reach out to a mental health professional.
->
-> 🆘 **Crisis Resources:**
-> - **USA**: 988 Suicide & Crisis Lifeline
-> - **UK**: 116 123 (Samaritans)
-> - **International**: [findahelpline.com](https://findahelpline.com)
 
 ## 🌟 Overview
 
