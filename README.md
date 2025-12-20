@@ -123,15 +123,21 @@ The system utilizes three distinct models for multimodal emotion detection. Belo
 - **F1-Score**: 0.91
 - **Classes**: Joy, Sadness, Anger, Fear, Love, Surprise
 
+![Text Model Confusion Matrix](model_evaluation/text_emotion_model_confusion_matrix.png)
+
 ### 🎙️ Audio Emotion Model (CRNN)
 - **Accuracy**: 87%
 - **F1-Score**: 0.87
 - **Classes**: Neutral, Calm, Happy, Sad, Angry, Fearful, Disgust, Surprised
 
+![Audio Model Confusion Matrix](model_evaluation/audio_emotion_model_confusion_matrix.png)
+
 ### 📸 Facial Emotion Model (MTCNN + ResNet)
 - **Accuracy**: 88%
 - **F1-Score**: 0.88
 - **Classes**: Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral
+
+![Facial Model Confusion Matrix](model_evaluation/facial_emotion_model_confusion_matrix.png)
 
 *Full evaluation reports and confusion matrices are available in the `model_evaluation/` directory.*
 
