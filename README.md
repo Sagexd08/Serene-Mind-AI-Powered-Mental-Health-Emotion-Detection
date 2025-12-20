@@ -198,40 +198,6 @@ npm run dev
 ### 3. Usage
 Open `http://localhost:3000`. You can now sign in using Clerk authentication.
 
-## 🚀 Deployment
 
-### Deploy Frontend to Vercel
-See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for complete deployment instructions.
-
-Quick steps:
-```bash
-# Push to GitHub
-git add .
-git commit -m "Ready for deployment"
-git push origin main
-
-# Import to Vercel and add environment variables from .env.example
-```
-
-### Deploy Models to S3/CDN
-Ensure you have AWS credentials set up, then run:
-```bash
-python deployment/deploy_ml.py
-```
-
-### Deploy Backend to EC2
-SSH into your instance using your key pair:
-```bash
-ssh -i "serene-mind-ec2-key.pem" ec2-user@ec2-13-60-229-227.eu-north-1.compute.amazonaws.com
-```
-
-Then copy the `backend/` folder and run the server:
-```bash
-# On EC2 instance
-git clone https://github.com/your-repo/serene-mind.git
-cd serene-mind/backend
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
 
 
