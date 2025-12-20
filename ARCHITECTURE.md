@@ -1,0 +1,97 @@
+# System Architecture & Design
+
+## 1. High-Level Architecture (AWS Free Tier)
+
+The system is designed to act as a hybrid serverless/microservices architecture to maximize Free Tier usage while handling compute-intensive ML tasks.
+
+```mermaid
+graph TD
+    User[User (Browser/Mobile)] -->|HTTPS| CF[CloudFront CDN]
+    CF -->|Static Assets| S3[S3 Bucket (Frontend)]
+    User -->|API Requests| APIG[API Gateway]
+    
+    subgraph "Authentication"
+        APIG -->|Auth| Cognito[AWS Cognito]
+    end
+    
+    subgraph "Serverless Backend (Lightweight)"
+        APIG -->|REST| Lambda[AWS Lambda (Python)]
+        Lambda -->|Read/Write| DDB[DynamoDB]
+        Lambda -->|Inference| TextModel[Text Emotion Model (Bi-LSTM)]
+        Lambda -->|Risk Logic| RiskEngine[Risk Scoring Engine]
+    end
+    
+    subgraph "Compute Backend (Heavyweight)"
+        APIG -->|WebSocket/HTTP| EC2[EC2 t2.micro]
+        EC2 -->|Inference| AudioModel[Speech Emotion Model (CNN+LSTM)]
+        EC2 -->|Inference| VisionModel[Facial Emotion Model (MobileNet)]
+        EC2 -->|Logs| CW[CloudWatch]
+    end
+```
+
+## 2. Component Design
+
+### 2.1. Frontend (Client-Side)
+- **Framework**: Next.js (Static Export).
+- **Hosting**: AWS S3 + CloudFront.
+- **Responsibility**: 
+    - UX for Check-in, Dashboard, and Resources.
+    - Capturing webcam frames (throttled to 1fps) and audio snippets.
+    - Pre-processing inputs before sending to backend.
+
+### 2.2. Backend APIs
+- **Text Analysis (Lambda)**: 
+    - Stateless efficient execution.
+    - Loads quantized Bi-LSTM model from S3 or Layer.
+- **Multimodal Analysis (EC2 - t2.micro)**:
+    - Runs a persistent FastAPI server.
+    - Handles audio (MFCC extraction) and image (Face detection + Classification).
+    - *Why EC2?* Specialized library dependencies (OpenCV, Librosa) and model loading latency make Lambda tricky/slow for these on the free tier.
+
+### 2.3. Data Storage (DynamoDB)
+**Table**: `SereneMind_Data`
+**PK**: `PartitionKey` (e.g., `USER#<sub_id>`)
+**SK**: `SortKey` (e.g., `ENTRY#<timestamp>`, `METADATA#profile`)
+
+| Entity | PK | SK | Attributes |
+| :--- | :--- | :--- | :--- |
+| **User Profile** | `USER#<id>` | `PROFILE` | `email`, `settings`, `privacy_consent` |
+| **Emotion Log** | `USER#<id>` | `LOG#<iso_date>` | `text_emotion`, `voice_emotion`, `face_emotion`, `risk_score` |
+| **Risk Trend** | `USER#<id>` | `TREND#<week_id>` | `volatility_index`, `avg_mood` |
+
+## 3. Machine Learning Pipelines
+
+### 3.1. Text Emotion Detection (NLP)
+- **Input**: Raw text string.
+- **Preprocessing**: Tokenization, lowercasing, stop-word removal.
+- **Model**: Bi-Directional LSTM with Attention Mechanism.
+- **Output**: Softmax probability over 6 classes: `[Sadness, Anxiety, Anger, Neutral, Joy, Stress]`.
+
+### 3.2. Speech Emotion Detection (Audio)
+- **Input**: `.wav` / `.webm` audio chunk (5s).
+- **Preprocessing**: 
+    - Resampling to 16kHz.
+    - Feature Extraction: Mel-Frequency Cepstral Coefficients (MFCCs).
+- **Model**: 1D CNN (for local features) + LSTM (for temporal dependencies).
+- **Output**: Intensity (Valence/Arousal) + Class.
+
+### 3.3. Facial Emotion Recognition (Vision)
+- **Input**: Base64 image frame.
+- **Preprocessing**: 
+    - Face detection via Haar Cascades or MTCNN (lightweight).
+    - Grayscale conversion & resizing (48x48).
+- **Model**: MobileNetV2 (Pre-trained & Fine-tuned) or ResNet18 (Feature extractor).
+- **Output**: 7 classes (Ekman's basic emotions).
+
+## 4. Risk Scoring & Algorithm
+The **Risk Engine** calculates a composite score (0-100):
+`Risk = (w1 * Text_Negativity) + (w2 * Voice_Stress) + (w3 * Face_Sadness) + (w4 * Volatility_Index)`
+
+- **Low (0-30)**: Normal fluctuation. Suggest: "Daily Journaling".
+- **Medium (31-70)**: Elevated stress. Suggest: "Breathing Exercise", "Walk".
+- **High (71-100)**: Sustained distress. Suggest: "Talk to Human", "Helpline".
+
+## 5. Security & Privacy
+- **Encryption**: KMS for S3 buckets, HTTPS for all transport.
+- **Auth**: Cognito User Pools with JWT verification on API Gateway.
+- **Anonymity**: User IDs are UUIDs; no mapping to real names in the logs table.
