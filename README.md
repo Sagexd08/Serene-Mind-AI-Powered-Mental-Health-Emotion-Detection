@@ -114,6 +114,27 @@ The **Risk Engine** calculates a composite score (0-100):
 - Data is stored under this random UUID.
 - Deleting browser cache ("forgetting" the UUID) effectively deletes access to the history, acting as a "Kill Switch" for privacy.
 
+## 📊 Model Performance
+
+The system utilizes three distinct models for multimodal emotion detection. Below are the performance metrics based on the evaluation dataset.
+
+### 📝 Text Emotion Model (DistilBERT)
+- **Accuracy**: 91%
+- **F1-Score**: 0.91
+- **Classes**: Joy, Sadness, Anger, Fear, Love, Surprise
+
+### 🎙️ Audio Emotion Model (CRNN)
+- **Accuracy**: 87%
+- **F1-Score**: 0.87
+- **Classes**: Neutral, Calm, Happy, Sad, Angry, Fearful, Disgust, Surprised
+
+### 📸 Facial Emotion Model (MTCNN + ResNet)
+- **Accuracy**: 88%
+- **F1-Score**: 0.88
+- **Classes**: Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral
+
+*Full evaluation reports and confusion matrices are available in the `model_evaluation/` directory.*
+
 ## 🚀 Getting Started
 
 ### 1. Environment Setup
