@@ -1,69 +1,79 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
-class SeparableConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, padding=1, bias=False):
-        super(SeparableConv2d, self).__init__()
-        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=kernel_size, 
-                                   groups=in_channels, padding=padding, bias=bias)
-        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
-
-    def forward(self, x):
-        out = self.depthwise(x)
-        out = self.pointwise(out)
-        return out
+from facenet_pytorch import MTCNN
 
 class FacialEmotionModel(nn.Module):
     def __init__(self, num_classes=7):
         super(FacialEmotionModel, self).__init__()
         
-        # Architecture inspired by Mini-Xception for lightweight inference on Free Tier EC2
+        # We wrap MTCNN here for the pipeline, but during training/forward 
+        # we assume the input is already a cropped face tensor.
+        # This keeps the gradient graph clean if we fine-tune the CNN only.
         
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(16)
-        
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(32)
-        
-        self.block1 = nn.Sequential(
-            SeparableConv2d(32, 64),
+        # Backend Feature Extractor: ResNet18-like structure (Simplified for speed)
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
-            SeparableConv2d(64, 64),
-            nn.BatchNorm2d(64),
-            nn.MaxPool2d(kernel_size=2)
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            
+            self._make_layer(64, 64, 2),
+            self._make_layer(64, 128, 2, stride=2),
+            self._make_layer(128, 256, 2, stride=2),
+            self._make_layer(256, 512, 2, stride=2),
+            
+            nn.AdaptiveAvgPool2d((1, 1))
         )
         
-        self.block2 = nn.Sequential(
-            SeparableConv2d(64, 128),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            SeparableConv2d(128, 128),
-            nn.BatchNorm2d(128),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        
-        self.conv3 = nn.Conv2d(128, num_classes, kernel_size=3, padding=1)
-        
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.classifier = nn.Linear(512, num_classes)
+
+    def _make_layer(self, in_planes, planes, blocks, stride=1):
+        layers = []
+        layers.append(nn.Sequential(
+            nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False),
+            nn.BatchNorm2d(planes),
+            nn.ReLU()
+        ))
+        for _ in range(1, blocks):
+            layers.append(nn.Sequential(
+                nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False),
+                nn.BatchNorm2d(planes),
+                nn.ReLU()
+            ))
+        return nn.Sequential(*layers)
 
     def forward(self, x):
-        # Input: [Batch, 1, 48, 48] Grayscale
-        
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        
-        x = self.block1(x)
-        x = self.block2(x)
-        
-        x = self.conv3(x)
-        x = self.global_avg_pool(x)
-        
-        x = x.view(x.size(0), -1) # Flatten
-        
+        # Expects [Batch, 3, 224, 224] Aligned Faces
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
         return x
 
+class EmotionDetectorPipeline:
+    def __init__(self, device='cpu'):
+        self.device = device
+        self.mtcnn = MTCNN(keep_all=False, device=device)
+        self.model = create_vision_model().to(device)
+        self.model.eval()
+
+    def predict_from_frame(self, frame_img):
+        """
+        End-to-end: Detect Face -> Crop -> Predict Emotion
+        frame_img: PIL Image or numpy array
+        """
+        # MTCNN returns cropped tensor directly if return_prob=False
+        face_tensor = self.mtcnn(frame_img) 
+        
+        if face_tensor is None:
+            return None # No face detected
+            
+        face_tensor = face_tensor.unsqueeze(0).to(self.device) # Add batch dim
+        
+        with torch.no_grad():
+            logits = self.model(face_tensor)
+            probs = torch.softmax(logits, dim=1)
+            
+        return probs
+
 def create_vision_model(num_classes=7):
-    # Emotions: Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral
     return FacialEmotionModel(num_classes=num_classes)

@@ -1,59 +1,143 @@
-# SereneMind: AI-Driven Mental Health Support System
+# SereneMind: Private & Anonymous Mental Health AI
 
-> **Disclaimer:** SereneMind is an emotional support tool, not a medical device. It does not provide medical diagnoses. If you are in crisis, please contact your local emergency services or a mental health professional immediately.
+> **Disclaimer:** SereneMind is an emotional support tool, not a medical device. It does not provide medical diagnoses. If you are in crisis, please contact your local emergency services immediately.
 
 ## 🌟 Overview
-SereneMind is a privacy-first, multimodal mental health support platform designed to be calm, empathetic, and accessible. It leverages advanced Machine Learning to detect emotional states from **text**, **speech**, and **facial expressions**, providing personalized coping strategies and tracking emotional trends over time.
+SereneMind is a **privacy-first**, anonymous-by-default mental health tracking system using AWS and Multimodal AI.
+- **No Login Required**: Users are identified by a locally generated UUID.
+- **On-Device First**: We aim to process as much as possible privately.
+- **Multimodal**: Analyzes Text (NLP), Voice (Audio), and Facial Expressions.
 
-Built entirely on **AWS Free Tier**, this system demonstrates enterprise-grade architecture suitable for real-world deployment while prioritizing user privacy and ethical AI practices.
+## 🏗️ System Architecture & Workflow
 
-## 🎯 Key Features
-- **Multimodal Emotion Detection**: Real-time analysis of text (Natural Language Processing), voice (Audio Signal Processing), and facial expressions (Computer Vision).
-- **Risk Scoring & Trend Engine**: Transparent, explainable risk assessment to track emotional volatility and alert users to potential burnout or distress.
-- **Empathetic AI Interface**: A calming, "non-triggering" UI designed to reduce cognitive load and anxiety.
-- **Privacy-First Architecture**: End-to-end encryption, on-device options, and strict data opt-in policies.
-- **Resource Recommendation**: Context-aware suggestions for breathing exercises, journaling, or professional help.
+![System Workflow](./41598_2025_89202_Fig1_HTML.png)
 
-## 🏗️ Tech Stack
-- **Frontend**: Next.js (React), Tailwind CSS (Pastelhues), Framer Motion
-- **Backend**: Python (FastAPI/Mangum), AWS Lambda
-- **Machine Learning**: PyTorch (Bi-LSTM for text, CNN+LSTM for audio, MobileNet for vision)
-- **Database**: AWS DynamoDB (Single-table design)
-- **Infrastructure**: AWS S3, CloudFront, API Gateway, Cognito, EC2 (t2.micro for inference)
+## 1. High-Level Architecture (AWS Free Tier)
 
-## 🔐 Ethics & Privacy
-- **Opt-In/Opt-Out**: Users have full control over their data.
-- **Data Deletion**: "Right to be forgotten" is implemented at the database level.
-- **Transparent AI**: Risk scores are explained in human-readable terms, avoiding "black box" anxiety.
+The system is designed to act as a hybrid serverless/microservices architecture to maximize Free Tier usage while handling compute-intensive ML tasks.
+
+```mermaid
+graph TD
+    User[User (Browser/Mobile)] -->|HTTPS| CF[CloudFront CDN]
+    CF -->|Static Assets| S3[S3 Bucket (Frontend)]
+    User -->|API Requests| APIG[API Gateway]
+    
+    subgraph "Authentication"
+        APIG -->|Auth| Cognito[AWS Cognito]
+    end
+    
+    subgraph "Serverless Backend (Lightweight)"
+        APIG -->|REST| Lambda[AWS Lambda (Python)]
+        Lambda -->|Read/Write| DDB[DynamoDB]
+        Lambda -->|Inference| TextModel[Text Emotion Model (Bi-LSTM)]
+        Lambda -->|Risk Logic| RiskEngine[Risk Scoring Engine]
+    end
+    
+    subgraph "Compute Backend (Heavyweight)"
+        APIG -->|WebSocket/HTTP| EC2[EC2 t2.micro]
+        EC2 -->|Inference| AudioModel[Speech Emotion Model (CNN+LSTM)]
+        EC2 -->|Inference| VisionModel[Facial Emotion Model (MobileNet)]
+        EC2 -->|Logs| CW[CloudWatch]
+    end
+```
+
+## 2. Component Design
+
+### 2.1. Frontend (Client-Side)
+- **Framework**: Next.js (Static Export).
+- **Hosting**: AWS S3 + CloudFront.
+- **Responsibility**: 
+    - UX for Check-in, Dashboard, and Resources.
+    - Capturing webcam frames (throttled to 1fps) and audio snippets.
+    - Pre-processing inputs before sending to backend.
+
+### 2.2. Backend APIs
+- **Text Analysis (Lambda)**: 
+    - Stateless efficient execution.
+    - Loads quantized Bi-LSTM model from S3 or Layer.
+- **Multimodal Analysis (EC2 - t2.micro)**:
+    - Runs a persistent FastAPI server.
+    - Handles audio (MFCC extraction) and image (Face detection + Classification).
+    - *Why EC2?* Specialized library dependencies (OpenCV, Librosa) and model loading latency make Lambda tricky/slow for these on the free tier.
+
+### 2.3. Data Storage (DynamoDB)
+**Table**: `SereneMind_Data`
+**PK**: `PartitionKey` (e.g., `USER#<sub_id>`)
+**SK**: `SortKey` (e.g., `ENTRY#<timestamp>`, `METADATA#profile`)
+
+| Entity | PK | SK | Attributes |
+| :--- | :--- | :--- | :--- |
+| **User Profile** | `USER#<id>` | `PROFILE` | `email`, `settings`, `privacy_consent` |
+| **Emotion Log** | `USER#<id>` | `LOG#<iso_date>` | `text_emotion`, `voice_emotion`, `face_emotion`, `risk_score` |
+| **Risk Trend** | `USER#<id>` | `TREND#<week_id>` | `volatility_index`, `avg_mood` |
+
+## 3. Machine Learning Pipelines
+
+### 3.1. Text Emotion Detection (NLP)
+- **Input**: Raw text string.
+- **Preprocessing**: Tokenization, lowercasing, stop-word removal.
+- **Model**: Bi-Directional LSTM with Attention Mechanism.
+- **Output**: Softmax probability over 6 classes: `[Sadness, Anxiety, Anger, Neutral, Joy, Stress]`.
+
+### 3.2. Speech Emotion Detection (Audio)
+- **Input**: `.wav` / `.webm` audio chunk (5s).
+- **Preprocessing**: 
+    - Resampling to 16kHz.
+    - Feature Extraction: Mel-Frequency Cepstral Coefficients (MFCCs).
+- **Model**: 1D CNN (for local features) + LSTM (for temporal dependencies).
+- **Output**: Intensity (Valence/Arousal) + Class.
+
+### 3.3. Facial Emotion Recognition (Vision)
+- **Input**: Base64 image frame.
+- **Preprocessing**: 
+    - Face detection via Haar Cascades or MTCNN (lightweight).
+    - Grayscale conversion & resizing (48x48).
+- **Model**: MobileNetV2 (Pre-trained & Fine-tuned) or ResNet18 (Feature extractor).
+- **Output**: 7 classes (Ekman's basic emotions).
+
+## 4. Risk Scoring & Algorithm
+The **Risk Engine** calculates a composite score (0-100):
+`Risk = (w1 * Text_Negativity) + (w2 * Voice_Stress) + (w3 * Face_Sadness) + (w4 * Volatility_Index)`
+
+- **Low (0-30)**: Normal fluctuation. Suggest: "Daily Journaling".
+- **Medium (31-70)**: Elevated stress. Suggest: "Breathing Exercise", "Walk".
+- **High (71-100)**: Sustained distress. Suggest: "Talk to Human", "Helpline".
+
+## 5. Security & Privacy
+- **Encryption**: KMS for S3 buckets, HTTPS for all transport.
+- **Auth**: Cognito User Pools with JWT verification on API Gateway.
+- **Anonymity**: User IDs are UUIDs; no mapping to real names in the logs table.
+
+## 🔐 Privacy & Anonymity
+- Users are assigned a random UUID on first visit.
+- No email, phone number, or name is ever requested.
+- Data is stored under this random UUID.
+- Deleting browser cache ("forgetting" the UUID) effectively deletes access to the history, acting as a "Kill Switch" for privacy.
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js 18+
-- Python 3.9+
-- AWS Account (Free Tier eligible)
+### 1. Environment Setup
+**Frontend**: Create `.env.local`:
+```
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
 
-### Installation
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/serenemind.git
-   cd serenemind
-   ```
+**Backend**: Create `.env`:
+```
+AWS_REGION=eu-north-1
+EMOTION_LOGS_TABLE=EmotionLogs
+```
 
-2. **Backend Setup**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
-   pip install -r requirements.txt
-   ```
+### 2. Run Locally
+```bash
+# Backend
+cd backend
+uvicorn main:app --reload
 
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+# Frontend
+cd frontend
+npm run dev
+```
 
-## 📄 License
-MIT License. Open for educational and non-commercial portfolio use.
+### 3. Usage
+Open `http://localhost:3000`. You will be instantly assigned a session ID and can start checking in.
