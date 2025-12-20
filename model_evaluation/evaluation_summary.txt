@@ -1,0 +1,23 @@
+Model Evaluation Summary
+========================
+
+====================
+Text Emotion Model
+====================
+Accuracy: 0.91
+Weighted F1-Score: 0.91
+--------------------
+
+====================
+Audio Emotion Model
+====================
+Accuracy: 0.87
+Weighted F1-Score: 0.87
+--------------------
+
+====================
+Facial Emotion Model
+====================
+Accuracy: 0.88
+Weighted F1-Score: 0.88
+--------------------

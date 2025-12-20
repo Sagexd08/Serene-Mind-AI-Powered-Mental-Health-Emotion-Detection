@@ -1,0 +1,79 @@
+service: serene-mind-api
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: eu-north-1
+  stage: prod
+  memorySize: 512
+  timeout: 30
+  
+  environment:
+    AWS_REGION: ${env:AWS_REGION}
+    EMOTION_LOGS_TABLE: ${env:EMOTION_LOGS_TABLE}
+    RISK_SUMMARY_TABLE: ${env:RISK_SUMMARY_TABLE}
+    MODEL_BUCKET: ${env:MODEL_BUCKET}
+    FORCE_REAL_DB: ${env:FORCE_REAL_DB}
+  
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:EMOTION_LOGS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:RISK_SUMMARY_TABLE}
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::${env:MODEL_BUCKET}
+            - arn:aws:s3:::${env:MODEL_BUCKET}/*
+
+functions:
+  api:
+    handler: main.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    layer: false
+    slim: true
+    strip: false
+    zip: true
+    fileName: requirements-lambda.txt
+    useDownloadCache: true
+    useStaticCache: true
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.venv/**'
+    - '!__pycache__/**'
+    - '!*.pyc'
+    - '!.pytest_cache/**'
+    - '!tests/**'
+    - 'main.py'
+    - 'database.py'
+    - 'risk_engine.py'
+    - '!ml_models/**'  # Exclude heavy ML models for now
