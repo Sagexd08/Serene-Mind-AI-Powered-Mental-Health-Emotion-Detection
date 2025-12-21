@@ -21,16 +21,18 @@ export default function Navbar() {
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`fixed top-0 z-50 w-full transition-all duration-300 ${scrolled || isOpen ? 'glass-card border-b border-white/20' : 'bg-transparent border-transparent'
+            className={`fixed top-0 z-50 w-full transition-all duration-300 ${scrolled
+                ? 'top-4 left-1/2 -translate-x-1/2 w-[95%] md:w-auto md:min-w-[700px] rounded-full glass-card border-[0.5px] border-white/40 shadow-xl backdrop-blur-xl py-2 px-6'
+                : 'bg-transparent border-transparent py-4'
                 }`}
         >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-20">
+            <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${scrolled ? 'w-full' : ''}`}>
+                <div className="flex items-center justify-between h-14 md:h-20">
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-2.5 rounded-2xl group-hover:scale-110 transition-transform shadow-sm">
-                            <Heart className="text-blue-600 w-6 h-6 fill-current" />
+                        <div className="bg-gradient-to-br from-blue-100 to-indigo-100 p-2 rounded-xl group-hover:scale-110 transition-transform shadow-sm">
+                            <Heart className="text-blue-600 w-5 h-5 md:w-6 md:h-6 fill-current" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight text-gray-800 group-hover:text-blue-600 transition-colors">SereneMind</span>
+                        <span className="text-lg md:text-xl font-bold tracking-tight text-gray-800 group-hover:text-blue-600 transition-colors">SereneMind</span>
                     </Link>
 
                     {/* Desktop Menu */}
@@ -42,7 +44,7 @@ export default function Navbar() {
 
                     <div className="hidden md:flex items-center gap-4">
                         <StreakCounter />
-                        <Link href="/check-in" className="relative group overflow-hidden bg-gray-900 text-white px-6 py-2.5 rounded-full font-medium shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5">
+                        <Link href="/check-in" className="relative group overflow-hidden bg-gray-900 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm md:text-base">
                             <span className="relative z-10 flex items-center gap-2">Begin Session</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </Link>
@@ -59,17 +61,22 @@ export default function Navbar() {
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden glass-panel border-t border-white/20 overflow-hidden"
+                        initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                        exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                        className="absolute top-full left-0 right-0 mt-2 mx-4 glass-panel rounded-2xl border border-white/40 shadow-2xl overflow-hidden md:hidden"
                     >
-                        <div className="px-4 py-6 flex flex-col gap-4">
+                        <div className="p-4 flex flex-col gap-2">
                             <MobileNavLink href="/check-in" onClick={() => setIsOpen(false)}>Check In</MobileNavLink>
                             <MobileNavLink href="/dashboard" onClick={() => setIsOpen(false)}>My Journey</MobileNavLink>
                             <MobileNavLink href="/resources" onClick={() => setIsOpen(false)}>Resources</MobileNavLink>
-                            <div className="pt-4 border-t border-gray-100/20">
-                                <StreakCounter />
+                            <div className="pt-4 border-t border-gray-100/50 flex flex-col gap-4">
+                                <Link href="/check-in" onClick={() => setIsOpen(false)} className="w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold">
+                                    Start Session
+                                </Link>
+                                <div className="flex justify-center">
+                                    <StreakCounter />
+                                </div>
                             </div>
                         </div>
                     </motion.div>
@@ -93,7 +100,7 @@ function MobileNavLink({ href, onClick, children }: { href: string; onClick: () 
         <Link
             href={href}
             onClick={onClick}
-            className="text-lg font-medium text-gray-800 p-2 rounded-xl hover:bg-white/50 transition-colors"
+            className="text-lg font-medium text-gray-800 p-3 rounded-xl hover:bg-white/60 transition-colors active:scale-95 transform"
         >
             {children}
         </Link>

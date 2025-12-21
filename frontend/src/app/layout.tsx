@@ -37,6 +37,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} scroll-smooth`}>
       <body className="antialiased min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
+        {/* Subtle noise texture for film-like quality */}
+        <div className="noise-overlay" />
         <Navbar />
         <main className="relative z-0">
           {children}
