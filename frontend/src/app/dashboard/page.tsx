@@ -69,45 +69,63 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Main Chart Card */}
+                    {/* Main Chart Card - Holographic Glass */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+                        className="glass-panel rounded-[2.5rem] p-8 shadow-xl border border-white/50 relative overflow-hidden group"
                     >
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl -z-10 group-hover:bg-blue-400/20 transition-colors duration-500" />
+
                         <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <Activity className="text-blue-500" /> Emotional Valence
-                            </h2>
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                    <Activity className="text-blue-600" /> Emotional Resonance
+                                </h2>
+                                <p className="text-gray-500 text-sm">Tracking your emotional baseline over the last 7 days</p>
+                            </div>
                             <div className="flex gap-2">
-                                <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-full text-gray-600">Weekly</span>
+                                <span className="text-xs font-bold px-4 py-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-sm">Weekly View</span>
                             </div>
                         </div>
 
-                        <div className="h-[300px] w-full">
+                        <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={data}>
                                     <defs>
                                         <linearGradient id="colorValence" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
+                                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} dy={10} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                    <XAxis
+                                        dataKey="date"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
+                                        dy={10}
+                                    />
                                     <YAxis hide domain={[0, 1]} />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                            backdropFilter: 'blur(12px)',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255,255,255,0.5)',
+                                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+                                        }}
+                                        cursor={{ stroke: '#4f46e5', strokeWidth: 2, strokeDasharray: '4 4' }}
                                     />
                                     <Area
                                         type="monotone"
                                         dataKey="valence"
-                                        stroke="#8884d8"
-                                        strokeWidth={3}
+                                        stroke="#4f46e5"
+                                        strokeWidth={4}
                                         fillOpacity={1}
                                         fill="url(#colorValence)"
-                                        animationDuration={2000}
+                                        animationDuration={1500}
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>

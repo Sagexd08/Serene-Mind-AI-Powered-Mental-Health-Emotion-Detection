@@ -7,6 +7,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Heart, Brain, Lock, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import BackgroundGradient from '@/components/BackgroundGradient';
+import Scene3D from '@/components/Scene3D';
 
 export default function Home() {
   useAnonymousUser(); // Ensure ID exists
@@ -19,10 +20,10 @@ export default function Home() {
       <BackgroundGradient />
       {/* Hero Section */}
       <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
-        {/* Helper layout for Spline to not block text */}
-        <div className="absolute inset-0 z-0 opacity-60">
-          <SplineWrapper scene="https://prod.spline.design/kZDDjO5HvC9y3ISJ/scene.splinecode" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/20 to-white pointer-events-none" />
+        {/* Helper layout for 3D Scene */}
+        <div className="absolute inset-0 z-0 opacity-80 mix-blend-multiply">
+          <Scene3D />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/10 to-white/90 pointer-events-none" />
         </div>
 
         {/* Hero Content */}
