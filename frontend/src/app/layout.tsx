@@ -1,15 +1,32 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Outfit } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
-  title: 'SereneMind | Emotional Support AI',
-  description: 'A privacy-first mental health support companion.',
+  title: 'SereneMind',
+  description: 'Private & Anonymous Mental Health AI',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SereneMind',
+  },
 };
 
 export default function RootLayout({
@@ -18,20 +35,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`${inter.variable} ${outfit.variable} min-h-screen bg-[var(--background)] flex flex-col`}>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <footer className="py-8 text-center text-gray-400 text-sm">
-            <p>© 2025 SereneMind. Not a medical replacement.</p>
-          </footer>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`${inter.variable} ${outfit.variable} scroll-smooth`}>
+      <body className="antialiased min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
+        <Navbar />
+        <main className="relative z-0">
+          {children}
+        </main>
+      </body>
+    </html>
   );
 }
-
-

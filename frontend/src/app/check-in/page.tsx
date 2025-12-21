@@ -1,438 +1,336 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, Send, Smile, StopCircle, ArrowRight, X, User } from 'lucide-react';
 import { useMediaStream } from '@/hooks/useMediaStream';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAnonymousUser } from '@/hooks/useAnonymousUser';
 import { config } from '@/config';
-import { Mic, Send, Smile, StopCircle, Activity, Zap, Clock, BarChart3, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-interface EmotionResult {
-    emotion: string;
-    confidence?: number;
-    details?: Record<string, number>;
-    arousal?: number;
-    valence?: number;
-    timestamp?: number;
-    processing_time_ms?: number;
-    processing_complete_ms?: number;
-    [key: string]: any;
-}
-
-const EMOTION_EMOJIS: Record<string, string> = {
-    anger: '😠', disgust: '🤢', fear: '😨', joy: '😊', sadness: '😢', neutral: '🤷',
-    calm: '😌', happy: '😄', sad: '😞', angry: '🤬', fearful: '😱',
-    disgusted: '🤮', surprised: '😲'
-};
-
-const EMOTION_COLORS: Record<string, string> = {
-    anger: 'from-red-500 to-red-600', 
-    disgust: 'from-green-500 to-emerald-600',
-    fear: 'from-purple-500 to-purple-600',
-    joy: 'from-yellow-400 to-yellow-500',
-    sadness: 'from-blue-500 to-blue-600',
-    neutral: 'from-gray-400 to-gray-500',
-    calm: 'from-teal-400 to-teal-500',
-    happy: 'from-yellow-400 to-orange-400',
-    sad: 'from-indigo-500 to-blue-600',
-};
+import PageTransition from '@/components/PageTransition';
+import SplineWrapper from '@/components/SplineWrapper';
+import EmotionOrb from '@/components/EmotionOrb';
+import { updateStreak } from '@/components/StreakCounter';
 
 export default function CheckIn() {
-    const { videoRef, startStream, stopStream, stream } = useMediaStream();
-    const { isRecording, audioBlob, startRecording, stopRecording } = useAudioRecorder();
-    const [text, setText] = useState("");
-    const [result, setResult] = useState<EmotionResult | null>(null);
-    const [mode, setMode] = useState<'text' | 'face' | 'voice'>('text');
-    const [isLoading, setIsLoading] = useState(false);
+    const userId = useAnonymousUser();
+    const [step, setStep] = useState<'mode' | 'input' | 'processing' | 'result'>('mode');
+    const [mode, setMode] = useState<'text' | 'voice' | 'face' | null>(null);
+    const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const userId = useAnonymousUser();
+    // Audio & Video
+    const { videoRef, startStream, stopStream, stream } = useMediaStream();
+    const { isRecording, audioBlob, startRecording, stopRecording, resetRecording } = useAudioRecorder();
 
-    const handleTextSubmit = async () => {
-        if (!userId || !text.trim()) return;
-        
-        setIsLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${config.apiBaseUrl}/emotion/text`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-id': userId
-                },
-                body: JSON.stringify({ text, user_id: userId })
-            });
-            
-            if (!res.ok) throw new Error('Failed to analyze emotion');
-            
-            const data = await res.json();
-            setResult(data);
-            setText("");
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "API Error occurred");
-            console.error("API Error", e);
-        } finally {
-            setIsLoading(false);
+    // Inputs
+    const [textInput, setTextInput] = useState("");
+    const [transcript, setTranscript] = useState("");
+    const recognitionRef = useRef<any>(null);
+
+    // Initialize Speech Recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).webkitSpeechRecognition) {
+            const SpeechRecognition = (window as any).webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+
+            recognitionRef.current.onresult = (event: any) => {
+                let finalTrans = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTrans += event.results[i][0].transcript;
+                    }
+                }
+                if (finalTrans) setTranscript(prev => prev + " " + finalTrans);
+            };
         }
+    }, []);
+
+    const resetSession = () => {
+        setStep('mode');
+        setMode(null);
+        setResult(null);
+        setTextInput("");
+        setTranscript("");
+        resetRecording(); // Reset audio
+        stopStream();
     };
 
-    const handleAudioSubmit = async () => {
-        if (!audioBlob || !userId) return;
-        
-        setIsLoading(true);
-        setError(null);
-        try {
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'audio.wav');
-            
-            const res = await fetch(`${config.apiBaseUrl}/emotion/audio`, {
-                method: 'POST',
-                headers: { 'x-user-id': userId },
-                body: formData
-            });
-            
-            if (!res.ok) throw new Error('Failed to analyze audio');
-            
-            const data = await res.json();
-            setResult(data);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Audio analysis failed");
-            console.error("API Error", e);
-        } finally {
-            setIsLoading(false);
-        }
+    // Handlers
+    const handleVoiceStart = () => {
+        setTranscript("");
+        startRecording();
+        if (recognitionRef.current) recognitionRef.current.start();
     };
 
-    const handleFaceCapture = async () => {
-        if (!videoRef.current || !userId) return;
-        
-        setIsLoading(true);
+    const handleVoiceStop = () => {
+        stopRecording();
+        if (recognitionRef.current) recognitionRef.current.stop();
+    };
+
+    const handleSubmit = async () => {
+        setStep('processing');
         setError(null);
+
+        const headers: Record<string, string> = {};
+        if (userId) headers['x-user-id'] = userId;
+
         try {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            if (!context || !videoRef.current?.videoWidth) return;
-            
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            context.drawImage(videoRef.current, 0, 0);
-            
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                
-                const formData = new FormData();
-                formData.append('file', blob, 'face_capture.jpg');
-                
-                const res = await fetch(`${config.apiBaseUrl}/emotion/face`, {
+            let res;
+            if (mode === 'text') {
+                res = await fetch(`${config.apiBaseUrl}/emotion/text`, {
                     method: 'POST',
-                    headers: { 'x-user-id': userId },
+                    headers: { ...headers, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: textInput, user_id: userId })
+                });
+            } else if (mode === 'voice' && audioBlob) {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'audio.wav');
+                // Send transcript too if backend supports it (implementation plan says yes, but keeping simple for now)
+
+                res = await fetch(`${config.apiBaseUrl}/emotion/audio`, {
+                    method: 'POST',
+                    headers,
                     body: formData
                 });
-                
-                if (!res.ok) throw new Error('Failed to analyze face');
-                
+            } else if (mode === 'face' && videoRef.current) {
+                const canvas = document.createElement('canvas');
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+
+                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r));
+                if (blob) {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'face.jpg');
+                    res = await fetch(`${config.apiBaseUrl}/emotion/face`, {
+                        method: 'POST',
+                        headers,
+                        body: formData
+                    });
+                }
+            }
+
+            if (res && res.ok) {
                 const data = await res.json();
-                setResult(data);
-                setIsLoading(false);
-            });
+
+                // Simulate delay for "calm calculation" effect
+                setTimeout(() => {
+                    setResult(data);
+                    setStep('result');
+                    updateStreak(); // Gamification Hook
+                }, 1500);
+            } else {
+                throw new Error("Analysis failed");
+            }
         } catch (e) {
-            setError(e instanceof Error ? e.message : "Face analysis failed");
-            setIsLoading(false);
+            setError("Something went wrong. Please try again.");
+            setStep('input');
         }
     };
 
-    if (!userId) {
-        return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-                <p className="text-gray-600">Initializing...</p>
-            </div>
-        </div>;
-    }
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 md:p-8">
-            <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <motion.div 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">Emotional Check-In</h1>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            Real-time Analysis
-                        </span>
-                        <span className="bg-white px-4 py-2 rounded-lg shadow-sm font-mono">ID: {userId.slice(0, 12)}...</span>
-                    </div>
-                </motion.div>
+        <PageTransition>
+            <div className="min-h-screen bg-gray-50 flex flex-col pt-20">
+                <div className="flex-1 max-w-4xl mx-auto w-full p-4 flex flex-col justify-center">
 
-                {/* Mode Switcher */}
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="flex gap-3 mb-8 flex-wrap"
-                >
-                    {[
-                        { id: 'text', label: 'Journaling', icon: Send, color: 'blue' },
-                        { id: 'face', label: 'Face Scan', icon: Smile, color: 'purple' },
-                        { id: 'voice', label: 'Voice Note', icon: Mic, color: 'orange' }
-                    ].map((m) => (
-                        <button
-                            key={m.id}
-                            onClick={() => {
-                                setMode(m.id as any);
-                                if (m.id === 'face') startStream();
-                            }}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-medium transition-all ${
-                                mode === m.id 
-                                    ? `bg-gradient-to-r from-${m.color}-500 to-${m.color}-600 text-white shadow-lg scale-105` 
-                                    : 'bg-white text-gray-600 hover:shadow-md'
-                            }`}
-                        >
-                            <m.icon size={20} /> {m.label}
-                        </button>
-                    ))}
-                </motion.div>
+                    <AnimatePresence mode="wait">
 
-                {/* Error Alert */}
-                {error && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-6 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 text-red-700"
-                    >
-                        <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-                        <p>{error}</p>
-                    </motion.div>
-                )}
-
-                <div className="grid lg:grid-cols-2 gap-6">
-                    {/* Input Area */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 min-h-[500px] flex flex-col"
-                    >
-                        {mode === 'text' && (
-                            <>
-                                <h2 className="text-2xl font-bold mb-4 text-gray-800">What's on your mind?</h2>
-                                <p className="text-gray-500 text-sm mb-6">Share your thoughts and let our AI understand your emotional state in real-time.</p>
-                                <textarea
-                                    className="w-full flex-1 p-4 rounded-xl bg-gray-50 border border-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
-                                    placeholder="I'm feeling... Today was challenging because... I'm grateful for..."
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                />
-                                <button
-                                    onClick={handleTextSubmit}
-                                    disabled={isLoading || !text.trim()}
-                                    className="mt-6 w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                            Analyzing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Zap size={18} /> Analyze Emotions
-                                        </>
-                                    )}
-                                </button>
-                            </>
-                        )}
-
-                        {mode === 'face' && (
-                            <div className="flex flex-col h-full">
-                                <h2 className="text-2xl font-bold mb-2 text-gray-800">Face Emotion Scan</h2>
-                                <p className="text-gray-500 text-sm mb-4">Let our AI analyze your facial expressions for real-time emotion detection.</p>
-                                <div className="relative flex-1 bg-black rounded-2xl overflow-hidden mb-4 border-4 border-gray-200">
-                                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                    {!stream && (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 bg-gradient-to-br from-black/50 to-black/50">
-                                            <Smile size={40} className="mb-2" />
-                                            <p>Enable camera to start</p>
-                                        </div>
-                                    )}
-                                    {stream && (
-                                        <div className="absolute top-4 right-4 bg-red-500 px-3 py-1 rounded-full text-xs font-semibold text-white flex items-center gap-1">
-                                            <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div> LIVE
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-3">
-                                    <button 
-                                        onClick={stopStream}
-                                        className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                    >
-                                        Stop Camera
-                                    </button>
-                                    <button 
-                                        onClick={handleFaceCapture}
-                                        disabled={isLoading || !stream}
-                                        className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 flex items-center justify-center gap-2"
-                                    >
-                                        {isLoading ? 'Analyzing...' : 'Capture & Analyze'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {mode === 'voice' && (
-                            <div className="flex flex-col h-full items-center justify-center space-y-8">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">Voice Analysis</h2>
-                                    <p className="text-gray-500 text-sm text-center">Record your voice and let our AI detect your emotional tone in real-time.</p>
-                                </div>
-
-                                <div className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 bg-gradient-to-br from-orange-100 to-red-100 ${isRecording ? 'ring-4 ring-red-300 animate-pulse' : ''}`}>
-                                    <Mic className={`w-16 h-16 ${isRecording ? 'text-red-500 animate-bounce' : 'text-orange-500'}`} />
-                                </div>
-
-                                {!isRecording && !audioBlob && (
-                                    <button 
-                                        onClick={startRecording}
-                                        className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition-all text-lg"
-                                    >
-                                        Start Recording
-                                    </button>
-                                )}
-
-                                {isRecording && (
-                                    <button 
-                                        onClick={stopRecording}
-                                        className="px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-2 text-lg"
-                                    >
-                                        <StopCircle size={24} /> Stop Recording
-                                    </button>
-                                )}
-
-                                {audioBlob && !isRecording && (
-                                    <div className="flex flex-col items-center gap-4 w-full">
-                                        <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-green-700 text-sm font-medium">
-                                            ✓ Recording saved successfully
-                                        </div>
-                                        <button 
-                                            onClick={handleAudioSubmit}
-                                            disabled={isLoading}
-                                            className="w-full px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            {isLoading ? 'Analyzing...' : <>
-                                                <Zap size={18} /> Analyze Voice
-                                            </>}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </motion.div>
-
-                    {/* Results Area */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 min-h-[500px]"
-                    >
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">Emotional Insights</h2>
-
-                        {result ? (
+                        {/* Step 1: Mode Selection */}
+                        {step === 'mode' && (
                             <motion.div
+                                key="mode"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="space-y-6"
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="text-center"
                             >
-                                {/* Main Emotion Display */}
-                                <div className={`bg-gradient-to-br ${EMOTION_COLORS[result.emotion] || 'from-gray-400 to-gray-500'} rounded-2xl p-8 text-white text-center`}>
-                                    <span className="text-7xl block mb-4">{EMOTION_EMOJIS[result.emotion] || '🤷'}</span>
-                                    <h3 className="text-4xl font-bold capitalize mb-2">{result.emotion}</h3>
-                                    <div className="flex items-center justify-center gap-2 text-white/90">
-                                        <Zap size={16} />
-                                        <span className="text-lg font-semibold">{Math.round((result.confidence || 0) * 100)}% Confidence</span>
-                                    </div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-8">How would you like to check in?</h1>
+                                <div className="grid md:grid-cols-3 gap-6">
+                                    <ModeCard
+                                        icon={Send}
+                                        title="Journal"
+                                        color="bg-blue-100 text-blue-600"
+                                        onClick={() => { setMode('text'); setStep('input'); }}
+                                    />
+                                    <ModeCard
+                                        icon={Mic}
+                                        title="Voice"
+                                        color="bg-orange-100 text-orange-600"
+                                        onClick={() => { setMode('voice'); setStep('input'); }}
+                                    />
+                                    <ModeCard
+                                        icon={Smile}
+                                        title="Face Scan"
+                                        color="bg-purple-100 text-purple-600"
+                                        onClick={() => { setMode('face'); setStep('input'); startStream(); }}
+                                    />
                                 </div>
-
-                                {/* Emotion Breakdown */}
-                                {result.details && Object.keys(result.details).length > 0 && (
-                                    <div className="space-y-3">
-                                        <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                                            <BarChart3 size={18} className="text-blue-600" /> Emotion Breakdown
-                                        </h4>
-                                        {Object.entries(result.details).slice(0, 5).map(([emotion, score]) => (
-                                            <div key={emotion} className="space-y-1">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-gray-700 capitalize font-medium">{emotion}</span>
-                                                    <span className="text-gray-600 font-semibold">{Math.round(Number(score) * 100)}%</span>
-                                                </div>
-                                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                    <motion.div
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${Number(score) * 100}%` }}
-                                                        transition={{ duration: 0.6, ease: "easeOut" }}
-                                                        className={`h-full bg-gradient-to-r ${EMOTION_COLORS[emotion] || 'from-gray-400 to-gray-500'}`}
-                                                    ></motion.div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Metrics */}
-                                {(result.arousal !== undefined || result.valence !== undefined || result.processing_complete_ms) && (
-                                    <div className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-200">
-                                        {result.arousal !== undefined && (
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold text-purple-600">{Math.round(result.arousal * 100)}%</p>
-                                                <p className="text-xs text-gray-600">Arousal</p>
-                                            </div>
-                                        )}
-                                        {result.valence !== undefined && (
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold text-blue-600">{Math.round(result.valence * 100)}%</p>
-                                                <p className="text-xs text-gray-600">Valence</p>
-                                            </div>
-                                        )}
-                                        {result.processing_complete_ms && (
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold text-green-600">{result.processing_complete_ms}ms</p>
-                                                <p className="text-xs text-gray-600">Analysis Time</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Suggestion */}
-                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
-                                    <p className="text-sm text-gray-700">
-                                        <span className="font-semibold block mb-2">💡 Suggestion:</span>
-                                        Based on your emotion, try grounding exercises or take a short break to reset your mind.
-                                    </p>
-                                </div>
-
-                                <button
-                                    onClick={() => { setResult(null); setText(""); }}
-                                    className="w-full py-3 border border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-                                >
-                                    Start Another Session
-                                </button>
                             </motion.div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                <Activity className="w-16 h-16 mb-4 opacity-20" />
-                                <p className="text-lg font-medium">No analysis yet</p>
-                                <p className="text-sm mt-1">Select a mode and share to see real-time insights</p>
-                            </div>
                         )}
-                    </motion.div>
+
+                        {/* Step 2: Input */}
+                        {step === 'input' && (
+                            <motion.div
+                                key="input"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden relative"
+                            >
+                                <button onClick={resetSession} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600">
+                                    <X size={24} />
+                                </button>
+
+                                <div className="p-8 min-h-[400px] flex flex-col items-center justify-center">
+                                    {mode === 'text' && (
+                                        <div className="w-full max-w-lg">
+                                            <h2 className="text-2xl font-bold mb-4">Write it out</h2>
+                                            <textarea
+                                                value={textInput}
+                                                onChange={(e) => setTextInput(e.target.value)}
+                                                placeholder="I'm feeling..."
+                                                className="w-full h-40 p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-100 resize-none text-lg text-gray-700 placeholder-gray-400"
+                                            />
+                                            <ActionButton onClick={handleSubmit} disabled={!textInput.trim()} text="Analyze" />
+                                        </div>
+                                    )}
+
+                                    {mode === 'voice' && (
+                                        <div className="text-center">
+                                            <div className={`w-32 h-32 rounded-full mx-auto flex items-center justify-center mb-6 transition-all ${isRecording ? 'bg-red-50 animate-pulse' : 'bg-orange-50'}`}>
+                                                <Mic size={48} className={isRecording ? 'text-red-500' : 'text-orange-500'} />
+                                            </div>
+                                            {isRecording ? (
+                                                <div className="mb-6">
+                                                    <p className="text-gray-500 mb-2">Listening...</p>
+                                                    <p className="text-gray-800 font-medium italic min-h-[1.5rem]">{transcript}</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-500 mb-6">Tap to start recording</p>
+                                            )}
+
+                                            {!isRecording && !audioBlob && (
+                                                <button onClick={handleVoiceStart} className="bg-gray-900 text-white px-8 py-3 rounded-full font-bold">Start Recording</button>
+                                            )}
+                                            {isRecording && (
+                                                <button onClick={handleVoiceStop} className="bg-red-500 text-white px-8 py-3 rounded-full font-bold">Stop</button>
+                                            )}
+                                            {audioBlob && !isRecording && (
+                                                <div className="space-y-4">
+                                                    <p className="text-green-600 font-medium">Recording saved!</p>
+                                                    <ActionButton onClick={handleSubmit} text="Analyze Voice" />
+                                                    <button onClick={() => { resetRecording(); setTranscript(""); }} className="block mx-auto text-sm text-gray-400 underline">Record Again</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {mode === 'face' && (
+                                        <div className="w-full flex flex-col items-center">
+                                            <div className="relative w-full max-w-md aspect-video bg-black rounded-2xl overflow-hidden mb-6 shadow-inner">
+                                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                            </div>
+                                            <ActionButton onClick={handleSubmit} disabled={!stream} text="Capture & Analyze" />
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Step 3: Processing */}
+                        {step === 'processing' && (
+                            <motion.div
+                                key="processing"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex flex-col items-center justify-center h-[400px]"
+                            >
+                                <div className="relative w-32 h-32 mb-6">
+                                    <div className="absolute inset-0 border-4 border-t-blue-500 border-r-transparent border-b-blue-200 border-l-transparent rounded-full animate-spin" />
+                                </div>
+                                <h2 className="text-xl font-medium text-gray-600 animate-pulse">Finding patterns...</h2>
+                            </motion.div>
+                        )}
+
+                        {/* Step 4: Result */}
+                        {step === 'result' && result && (
+                            <motion.div
+                                key="result"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+                            >
+                                <div className="p-10 flex flex-col items-center text-center">
+                                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">Analysis Complete</h2>
+
+                                    <div className="mb-8">
+                                        <EmotionOrb emotion={result.emotion || result.overall_emotion} confidence={result.confidence || 0.9} size="lg" />
+                                    </div>
+
+                                    <h1 className="text-4xl font-bold text-gray-900 capitalize mb-2">{result.emotion || result.overall_emotion}</h1>
+                                    <p className="text-lg text-gray-500 mb-8 max-w-md">
+                                        We detected this emotion with <strong className="text-gray-800">{Math.round((result.confidence || 0.85) * 100)}%</strong> confidence.
+                                    </p>
+
+                                    {/* Action items from Result */}
+                                    <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+                                        <div className="bg-gray-50 p-4 rounded-xl text-left">
+                                            <span className="text-xs font-bold text-gray-400 uppercase">Valence</span>
+                                            <p className="text-xl font-bold text-gray-800">{Math.round((result.valence || 0.5) * 100)}%</p>
+                                        </div>
+                                        <div className="bg-gray-50 p-4 rounded-xl text-left">
+                                            <span className="text-xs font-bold text-gray-400 uppercase">Arousal</span>
+                                            <p className="text-xl font-bold text-gray-800">{Math.round((result.arousal || 0.4) * 100)}%</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-10 flex gap-4">
+                                        <button onClick={resetSession} className="px-6 py-3 rounded-full text-gray-600 font-medium hover:bg-gray-50">
+                                            Check In Again
+                                        </button>
+                                        <a href="/dashboard" className="px-8 py-3 rounded-full bg-gray-900 text-white font-bold hover:shadow-lg transition-all">
+                                            View Trends
+                                        </a>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                    </AnimatePresence>
                 </div>
             </div>
-        </div>
+        </PageTransition>
     );
 }
 
+function ModeCard({ icon: Icon, title, color, onClick }: any) {
+    return (
+        <motion.button
+            whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onClick}
+            className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center gap-4 transition-all"
+        >
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${color}`}>
+                <Icon size={32} />
+            </div>
+            <span className="text-lg font-bold text-gray-800">{title}</span>
+        </motion.button>
+    );
+}
+
+function ActionButton({ onClick, disabled, text }: any) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white h-14 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:shadow-none transition-all mt-6"
+        >
+            {text}
+        </button>
+    );
+}

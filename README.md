@@ -58,7 +58,7 @@ SereneMind is a **privacy-first**, **anonymous-by-default** mental health tracki
 | **Animation** | Framer Motion | Smooth UI transitions |
 | **Charts** | Recharts | Data visualization |
 | **Icons** | Lucide React | Modern icon library |
-| **Auth** | Clerk | User authentication & management |
+| **Auth** | Anonymous UUID | Client-side session management |
 | **State Management** | React Hooks | Local & global state |
 | **HTTP Client** | Fetch API | API communication |
 
@@ -85,7 +85,7 @@ SereneMind is a **privacy-first**, **anonymous-by-default** mental health tracki
 | **Storage (Database)** | DynamoDB | User data, emotion logs |
 | **CDN** | CloudFront | Global content delivery |
 | **API Gateway** | AWS API Gateway | API routing & throttling |
-| **Authentication** | AWS Cognito | JWT token validation |
+| **Authentication** | API Key / UUID | Stateless identification |
 | **Monitoring** | CloudWatch | Logs & metrics |
 | **Encryption** | AWS KMS | Data encryption at rest |
 | **Containerization** | Docker | Lambda deployment packages |
@@ -109,8 +109,8 @@ graph TB
     CF -->|Static Assets| S3["📦 S3 Bucket<br/>(Frontend)"] 
     User -->|API Requests| APIG["🔌 API Gateway"]
     
-    subgraph Auth["🔐 Authentication Layer"]
-        APIG -->|JWT Validation| Cognito["🔑 AWS Cognito<br/>User Pools"]
+    subgraph Auth["🔐 Security Layer"]
+        APIG -->|API Key/UUID| Guard["🛡️ Throttling &<br/>Validation"]
     end
     
     subgraph ServerlessBackend["⚡ Serverless Backend"]
@@ -146,7 +146,7 @@ graph TB
 | **Text Analysis** | AWS Lambda | Lightweight model, cold start acceptable, stateless |
 | **Audio/Vision** | EC2 (t2.micro) | Heavy dependencies (OpenCV, Librosa), persistent server |
 | **Database** | DynamoDB | NoSQL flexibility, free tier (25GB), single-table design |
-| **Authentication** | Cognito | JWT-based, scales automatically, free tier (50k MAU) |
+| **Authentication** | Anonymous UUID | Maximum privacy, zero barriers to entry |
 
 #### 📊 Request Flow
 
@@ -200,6 +200,7 @@ sequenceDiagram
     - UX for Check-in, Dashboard, and Resources.
     - Capturing webcam frames (throttled to 1fps) and audio snippets.
     - Pre-processing inputs before sending to backend.
+    - **Note:** Anonymous UUID is generated on client-side and stored in localStorage.
 
 ### 2.2. Backend APIs
 - **Text Analysis (Lambda)**: 
@@ -217,7 +218,7 @@ sequenceDiagram
 
 | Entity | PK | SK | Attributes |
 | :--- | :--- | :--- | :--- |
-| **User Profile** | `USER#<id>` | `PROFILE` | `email`, `settings`, `privacy_consent` |
+| **User Profile** | `USER#<id>` | `PROFILE` | `created_at`, `settings`, `privacy_consent` |
 | **Emotion Log** | `USER#<id>` | `LOG#<iso_date>` | `text_emotion`, `voice_emotion`, `face_emotion`, `risk_score` |
 | **Risk Trend** | `USER#<id>` | `TREND#<week_id>` | `volatility_index`, `avg_mood` |
 
@@ -255,8 +256,9 @@ The **Risk Engine** calculates a composite score (0-100):
 
 ## 5. Security & Privacy
 - **Encryption**: KMS for S3 buckets, HTTPS for all transport.
-- **Auth**: Cognito User Pools with JWT verification on API Gateway.
-- **Anonymity**: User IDs are UUIDs; no mapping to real names in the logs table.
+- **Auth**: Stateless requests identified by `x-user-id` header.
+- **Anonymity**: User IDs are UUIDs; no mapping to real names or emails.
+- **Privacy**: No PII is collected. Deleting browser data deletes the user identity.
 
 ## 🔐 Privacy & Anonymity
 - Users are assigned a random UUID on first visit.
@@ -363,7 +365,7 @@ vercel --prod
 - ✅ GDPR compliant data retention (30 days)
 
 ### API Security
-- ✅ JWT-based authentication
+- ✅ UUID-based stateless validation
 - ✅ Rate limiting (100 req/min per user)
 - ✅ CORS protection
 - ✅ Input validation with Pydantic
@@ -460,7 +462,8 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Download pre-trained models (optional)
-python ml_models/download_models.py
+# Run from root of the repo if executing directly, or adjust path:
+python ../ml_models/download_models.py
 ```
 
 #### 3️⃣ Frontend Setup
@@ -494,12 +497,6 @@ RISK_SUMMARY_TABLE=RiskSummary
 # S3 Buckets
 MODEL_BUCKET=serene-mind-models
 STATIC_ASSETS_BUCKET=serene-mind-frontend
-
-# ========================================
-# Clerk Authentication (Frontend)
-# ========================================
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
 
 # ========================================
 # API Configuration
@@ -573,7 +570,7 @@ npm run test:e2e
 ### 📱 Usage
 
 1. **Open Application**: Navigate to `http://localhost:3000`
-2. **Authentication**: Sign in using Clerk (or skip for anonymous mode)
+2. **Authentication**: Automatically signed in as anonymous user.
 3. **Daily Check-in**: Navigate to `/check-in` to log emotions
 4. **Dashboard**: View emotion trends at `/dashboard`
 5. **Resources**: Access mental health resources at `/resources`
@@ -587,7 +584,7 @@ npm run test:e2e
 ```http
 POST /api/analyze/text
 Content-Type: application/json
-Authorization: Bearer {token}
+x-user-id: uuid-v4
 
 {
   "text": "I'm feeling really happy today!",
@@ -609,65 +606,3 @@ Authorization: Bearer {token}
   "timestamp": "2025-12-21T10:30:00Z"
 }
 ```
-
-#### 🎤 Audio Emotion Analysis
-
-```http
-POST /api/analyze/audio
-Content-Type: multipart/form-data
-Authorization: Bearer {token}
-
-{
-  "audio": <binary_file>,
-  "user_id": "uuid-v4"
-}
-```
-
-#### 📸 Facial Emotion Analysis
-
-```http
-POST /api/analyze/face
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-  "image": "base64_encoded_image",
-  "user_id": "uuid-v4"
-}
-```
-
-#### ⚠️ Risk Score
-
-```http
-GET /api/risk-score/{user_id}
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-  "risk_score": 45,
-  "risk_level": "medium",
-  "factors": {
-    "text_negativity": 0.4,
-    "voice_stress": 0.3,
-    "face_sadness": 0.2,
-    "volatility_index": 0.5
-  },
-  "recommendations": [
-    "Practice deep breathing exercises",
-    "Take a short walk",
-    "Connect with a friend"
-  ]
-}
-```
-
-### 📖 Interactive API Documentation
-
-Once the backend is running, access:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-
-
-

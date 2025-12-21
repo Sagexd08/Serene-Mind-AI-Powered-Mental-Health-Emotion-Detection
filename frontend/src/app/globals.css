@@ -3,39 +3,84 @@
 @tailwind utilities;
 
 :root {
-  --background: #F4F7F6; /* Soft mint/grey off-white */
-  --foreground: #2C3E50; /* Dark slate blue for text, softer than black */
-  
-  /* Palette */
-  --primary: #5D9CEC; /* Calm Blue */
-  --primary-light: #AABEE3;
-  --secondary: #48CFAD; /* Mint Green */
-  --accent: #FFCE54; /* Warm Yellow */
-  --danger: #ED5565; /* Soft Red (avoid harsh triggers) */
-  --card: #FFFFFF;
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-@layer base {
-  body {
-    @apply bg-[var(--background)] text-[var(--foreground)] antialiased;
-    font-family: 'Inter', sans-serif; /* Setup required in layout */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-[var(--primary)] text-white px-6 py-3 rounded-full font-medium transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-blue-500/20;
-  }
-  
-  .btn-secondary {
-    @apply bg-white text-[var(--foreground)] border border-gray-200 px-6 py-3 rounded-full font-medium transition-all hover:bg-gray-50;
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-outfit), var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.dark .glass-panel {
+  background: rgba(20, 20, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass-card {
+  background: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Custom Gradients */
+.bg-gradient-calm {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.bg-gradient-aurora {
+  background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+}
+
+/* Animation Utilities */
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
   }
 
-  .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-xl rounded-3xl;
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
   }
-  
-  .heading-xl {
-    @apply text-4xl md:text-5xl font-bold tracking-tight text-[var(--foreground)];
-  }
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* Hide Scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

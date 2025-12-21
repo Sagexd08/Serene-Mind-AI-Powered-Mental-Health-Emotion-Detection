@@ -39,5 +39,10 @@ export function useAudioRecorder() {
         }
     };
 
-    return { isRecording, audioBlob, startRecording, stopRecording };
+    const resetRecording = () => {
+        setAudioBlob(null);
+        chunksRef.current = [];
+    };
+
+    return { isRecording, audioBlob, startRecording, stopRecording, resetRecording };
 }

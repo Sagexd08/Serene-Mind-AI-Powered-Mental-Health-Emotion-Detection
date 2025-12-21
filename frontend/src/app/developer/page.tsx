@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth, useUser } from '@clerk/nextjs';
 import { config } from '@/config';
-import { Plus, Trash, Copy, Key as KeyIcon, Terminal, Eye, EyeOff, CheckCircle, AlertCircle, Zap } from 'lucide-react';
+import { Plus, Trash, Copy, Key as KeyIcon, Terminal, Eye, EyeOff, CheckCircle, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ApiKey {
@@ -15,9 +14,6 @@ interface ApiKey {
 }
 
 export default function DeveloperConsole() {
-    const { getToken, isLoaded, isSignedIn } = useAuth();
-    const { user } = useUser();
-
     const [keys, setKeys] = useState<ApiKey[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -29,9 +25,8 @@ export default function DeveloperConsole() {
 
     const fetchKeys = async () => {
         try {
-            const token = await getToken();
             const res = await fetch(`${config.apiBaseUrl}/api-keys`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                // Auth headers removed for anonymous/dev mode
             });
             if (res.ok) {
                 const data = await res.json();
@@ -45,8 +40,8 @@ export default function DeveloperConsole() {
     };
 
     useEffect(() => {
-        if (isSignedIn) fetchKeys();
-    }, [isSignedIn]);
+        fetchKeys();
+    }, []);
 
     const createKey = async () => {
         if (!newLabel.trim()) {
@@ -56,11 +51,9 @@ export default function DeveloperConsole() {
 
         setIsCreating(true);
         try {
-            const token = await getToken();
             const res = await fetch(`${config.apiBaseUrl}/api-keys`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ label: newLabel })
@@ -85,10 +78,8 @@ export default function DeveloperConsole() {
         if (!confirm(`Revoke API key "${label}"? This action cannot be undone.`)) return;
 
         try {
-            const token = await getToken();
             const res = await fetch(`${config.apiBaseUrl}/api-keys/${apiKey}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 setKeys(keys.filter(k => k.api_key !== apiKey));
@@ -120,26 +111,13 @@ export default function DeveloperConsole() {
         return key.substring(0, 7) + "..." + key.substring(key.length - 4);
     };
 
-    if (!isLoaded) return <div className="p-8 text-center">Loading...</div>;
-    if (!isSignedIn) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
-                <div className="text-center p-8">
-                    <KeyIcon className="w-16 h-16 mx-auto mb-4 text-blue-500" />
-                    <h1 className="text-2xl font-bold text-gray-800">Sign In Required</h1>
-                    <p className="text-gray-500 mt-2">Please sign in to manage your API keys.</p>
-                </div>
-            </div>
-        );
-    }
-
     const activeKeyCount = keys.filter(k => k.is_active).length;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-center justify-between mb-8"
@@ -173,7 +151,7 @@ export default function DeveloperConsole() {
                 )}
 
                 {/* Create Key Section */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
@@ -212,7 +190,7 @@ export default function DeveloperConsole() {
                 </motion.div>
 
                 {/* Keys List */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
@@ -233,7 +211,7 @@ export default function DeveloperConsole() {
                     ) : (
                         <div className="grid gap-4">
                             {keys.map((key) => (
-                                <motion.div 
+                                <motion.div
                                     key={key.api_key}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -304,7 +282,7 @@ export default function DeveloperConsole() {
                 </motion.div>
 
                 {/* Documentation Tabs */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
@@ -315,18 +293,17 @@ export default function DeveloperConsole() {
                             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                                 <Terminal size={24} className="text-green-400" /> Integration Guide
                             </h2>
-                            
+
                             {/* Tab Buttons */}
                             <div className="flex gap-2 border-b border-gray-700 pb-4">
                                 {['curl', 'python', 'javascript'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setSelectedTabDoc(tab as any)}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                                            selectedTabDoc === tab
+                                        className={`px-4 py-2 rounded-lg font-medium transition-all ${selectedTabDoc === tab
                                                 ? 'bg-green-600 text-white'
                                                 : 'text-gray-400 hover:text-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         {tab.toUpperCase()}
                                     </button>
@@ -341,7 +318,7 @@ export default function DeveloperConsole() {
                             <div>
                                 <h3 className="text-green-400 font-mono mb-3 text-lg">Text Emotion Analysis</h3>
                                 <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-gray-300 border border-gray-700">
-{`curl -X POST ${config.apiBaseUrl}/emotion/text \\
+                                    {`curl -X POST ${config.apiBaseUrl}/emotion/text \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: your_api_key_here" \\
   -d '{
@@ -350,7 +327,7 @@ export default function DeveloperConsole() {
                                 </pre>
                                 <h3 className="text-green-400 font-mono mt-6 mb-3 text-lg">Expected Response</h3>
                                 <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-green-300 border border-gray-700">
-{`{
+                                    {`{
   "emotion": "joy",
   "confidence": 0.94,
   "details": {
@@ -372,7 +349,7 @@ export default function DeveloperConsole() {
                             <div>
                                 <h3 className="text-green-400 font-mono mb-3 text-lg">Python Integration</h3>
                                 <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-gray-300 border border-gray-700">
-{`import requests
+                                    {`import requests
 
 api_key = "your_api_key_here"
 headers = {
@@ -409,7 +386,7 @@ result = response.json()`}
                             <div>
                                 <h3 className="text-green-400 font-mono mb-3 text-lg">JavaScript Integration</h3>
                                 <pre className="bg-black/50 p-4 rounded-lg overflow-x-auto text-sm font-mono text-gray-300 border border-gray-700">
-{`const API_KEY = "your_api_key_here";
+                                    {`const API_KEY = "your_api_key_here";
 const API_URL = "${config.apiBaseUrl}";
 
 // Text Emotion Analysis
