@@ -71,12 +71,25 @@ export default function CheckIn() {
         if (recognitionRef.current) recognitionRef.current.stop();
     };
 
+    // Helper for Lambda
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = (reader.result as string).split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
     const handleSubmit = async () => {
         setStep('processing');
         setError(null);
 
         const headers: Record<string, string> = {};
-        if (userId) headers['x-user-id'] = userId;
+        const bodyBase = { user_id: userId };
 
         try {
             let res;
@@ -84,16 +97,22 @@ export default function CheckIn() {
                 res = await fetch(`${config.apiBaseUrl}/emotion/text`, {
                     method: 'POST',
                     headers: { ...headers, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: textInput, user_id: userId })
+                    body: JSON.stringify({
+                        modality: 'text',
+                        text: textInput,
+                        ...bodyBase
+                    })
                 });
             } else if (mode === 'voice' && audioBlob) {
-                const formData = new FormData();
-                formData.append('file', audioBlob, 'audio.wav');
-
+                const audioB64 = await blobToBase64(audioBlob);
                 res = await fetch(`${config.apiBaseUrl}/emotion/audio`, {
                     method: 'POST',
-                    headers,
-                    body: formData
+                    headers: { ...headers, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        modality: 'audio',
+                        audio: audioB64,
+                        ...bodyBase
+                    })
                 });
             } else if (mode === 'face' && videoRef.current) {
                 const canvas = document.createElement('canvas');
@@ -101,26 +120,27 @@ export default function CheckIn() {
                 canvas.height = videoRef.current.videoHeight;
                 canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
 
-                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r));
+                const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg'));
                 if (blob) {
-                    const formData = new FormData();
-                    formData.append('file', blob, 'face.jpg');
+                    const imageB64 = await blobToBase64(blob);
                     res = await fetch(`${config.apiBaseUrl}/emotion/face`, {
                         method: 'POST',
-                        headers,
-                        body: formData
+                        headers: { ...headers, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            modality: 'vision',
+                            image: imageB64,
+                            ...bodyBase
+                        })
                     });
                 }
             }
 
             if (res && res.ok) {
                 const data = await res.json();
-
-                // Simulate delay for "calm calculation" effect
                 setTimeout(() => {
                     setResult(data);
                     setStep('result');
-                    updateStreak(); // Gamification Hook
+                    updateStreak();
                 }, 1500);
             } else {
                 throw new Error("Analysis failed");
@@ -238,8 +258,8 @@ export default function CheckIn() {
                                                     onClick={handleVoiceStart}
                                                     disabled={isRecording}
                                                     className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${isRecording
-                                                            ? 'bg-gradient-to-br from-red-500 to-pink-600 shadow-red-200'
-                                                            : 'bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl hover:scale-105'
+                                                        ? 'bg-gradient-to-br from-red-500 to-pink-600 shadow-red-200'
+                                                        : 'bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl hover:scale-105'
                                                         } text-white shadow-2xl`}
                                                 >
                                                     <Mic size={36} />

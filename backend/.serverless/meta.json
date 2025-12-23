@@ -1,0 +1,205 @@
+{
+  "C:\\Users\\sohom\\OneDrive\\Desktop\\Coding\\emotion ml model enhanced\\backend\\serverless.yml": {
+    "versionFramework": "4.29.0",
+    "servicePath": "C:\\Users\\sohom\\OneDrive\\Desktop\\Coding\\emotion ml model enhanced\\backend\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "serene-mind-api",
+      "frameworkVersion": "4",
+      "useDotenv": true,
+      "provider": {
+        "name": "aws",
+        "runtime": "python3.10",
+        "region": "eu-north-1",
+        "stage": "prod",
+        "memorySize": 512,
+        "timeout": 30,
+        "environment": {
+          "AWS_REGION": "eu-north-1",
+          "EMOTION_LOGS_TABLE": "EmotionLogs",
+          "RISK_SUMMARY_TABLE": "RiskSummary",
+          "MODEL_BUCKET": "serene-mind-models",
+          "FORCE_REAL_DB": "true"
+        },
+        "iam": {
+          "role": {
+            "statements": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "dynamodb:Query",
+                  "dynamodb:Scan",
+                  "dynamodb:GetItem",
+                  "dynamodb:PutItem",
+                  "dynamodb:UpdateItem",
+                  "dynamodb:DeleteItem"
+                ],
+                "Resource": [
+                  "arn:aws:dynamodb:eu-north-1:*:table/EmotionLogs",
+                  "arn:aws:dynamodb:eu-north-1:*:table/RiskSummary"
+                ]
+              },
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:GetObject",
+                  "s3:ListBucket"
+                ],
+                "Resource": [
+                  "arn:aws:s3:::serene-mind-models",
+                  "arn:aws:s3:::serene-mind-models/*"
+                ]
+              }
+            ]
+          }
+        },
+        "versionFunctions": true
+      },
+      "functions": {
+        "api": {
+          "handler": "main.handler",
+          "events": [
+            {
+              "httpApi": {
+                "path": "/{proxy+}",
+                "method": "ANY",
+                "cors": {
+                  "allowedOrigins": [
+                    "*"
+                  ],
+                  "allowedHeaders": [
+                    "Content-Type",
+                    "Authorization",
+                    "x-user-id",
+                    "X-Api-Key"
+                  ],
+                  "allowedMethods": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "DELETE",
+                    "OPTIONS"
+                  ]
+                }
+              }
+            },
+            {
+              "httpApi": {
+                "path": "/",
+                "method": "ANY",
+                "cors": true
+              }
+            }
+          ]
+        }
+      },
+      "plugins": [
+        "serverless-python-requirements"
+      ],
+      "custom": {
+        "pythonRequirements": {
+          "dockerizePip": false,
+          "layer": false,
+          "slim": true,
+          "strip": false,
+          "zip": true,
+          "fileName": "requirements-lambda.txt",
+          "useDownloadCache": true,
+          "useStaticCache": true
+        }
+      },
+      "package": {
+        "patterns": [
+          "!node_modules/**",
+          "!.git/**",
+          "!.venv/**",
+          "!__pycache__/**",
+          "!*.pyc",
+          "!.pytest_cache/**",
+          "!tests/**",
+          "main.py",
+          "database.py",
+          "risk_engine.py",
+          "!ml_models/**"
+        ]
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "python3.10",
+      "region": "eu-north-1",
+      "stage": "prod",
+      "memorySize": 512,
+      "timeout": 30,
+      "environment": {
+        "AWS_REGION": "eu-north-1",
+        "EMOTION_LOGS_TABLE": "EmotionLogs",
+        "RISK_SUMMARY_TABLE": "RiskSummary",
+        "MODEL_BUCKET": "serene-mind-models",
+        "FORCE_REAL_DB": "true"
+      },
+      "iam": {
+        "role": {
+          "statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:eu-north-1:*:table/EmotionLogs",
+                "arn:aws:dynamodb:eu-north-1:*:table/RiskSummary"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::serene-mind-models",
+                "arn:aws:s3:::serene-mind-models/*"
+              ]
+            }
+          ]
+        }
+      },
+      "versionFunctions": true
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "error": {
+      "message": "Serverless plugin \"serverless-python-requirements\" not found. Make sure it's installed and listed in the \"plugins\" section of your serverless config file. Use the --debug flag to learn more.",
+      "stack": "ServerlessError2: Serverless plugin \"serverless-python-requirements\" not found. Make sure it's installed and listed in the \"plugins\" section of your serverless config file. Use the --debug flag to learn more.\n    at PluginManager.resolveServicePlugins (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1459:4438)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async PluginManager.loadAllPlugins (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1459:2626)\n    at async Serverless.init (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1466:9844)\n    at async runFramework (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1493:843)\n    at async TraditionalRunner.run (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1489:28508)\n    at async route (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1664:2848)\n    at async Object.run (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1665:3876)\n    at async run2 (file:///C:/Users/sohom/.serverless/releases/4.29.0/package/dist/sf-core.js:1665:5030)",
+      "code": "PLUGIN_NOT_FOUND"
+    },
+    "serviceRawFile": "service: serene-mind-api\r\n\r\nframeworkVersion: '4'\r\nuseDotenv: true\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: python3.10\r\n  region: eu-north-1\r\n  stage: prod\r\n  memorySize: 512\r\n  timeout: 30\r\n  \r\n  environment:\r\n    AWS_REGION: ${self:provider.region}\r\n    EMOTION_LOGS_TABLE: ${env:EMOTION_LOGS_TABLE}\r\n    RISK_SUMMARY_TABLE: ${env:RISK_SUMMARY_TABLE}\r\n    MODEL_BUCKET: ${env:MODEL_BUCKET}\r\n    FORCE_REAL_DB: ${env:FORCE_REAL_DB}\r\n  \r\n  iam:\r\n    role:\r\n      statements:\r\n        - Effect: Allow\r\n          Action:\r\n            - dynamodb:Query\r\n            - dynamodb:Scan\r\n            - dynamodb:GetItem\r\n            - dynamodb:PutItem\r\n            - dynamodb:UpdateItem\r\n            - dynamodb:DeleteItem\r\n          Resource:\r\n            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:EMOTION_LOGS_TABLE}\r\n            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:RISK_SUMMARY_TABLE}\r\n        - Effect: Allow\r\n          Action:\r\n            - s3:GetObject\r\n            - s3:ListBucket\r\n          Resource:\r\n            - arn:aws:s3:::${env:MODEL_BUCKET}\r\n            - arn:aws:s3:::${env:MODEL_BUCKET}/*\r\n\r\nfunctions:\r\n  api:\r\n    handler: main.handler\r\n    events:\r\n      - httpApi:\r\n          path: /{proxy+}\r\n          method: ANY\r\n          cors:\r\n            allowedOrigins:\r\n              - '*'\r\n            allowedHeaders:\r\n              - Content-Type\r\n              - Authorization\r\n              - x-user-id\r\n              - X-Api-Key\r\n            allowedMethods:\r\n              - GET\r\n              - POST\r\n              - PUT\r\n              - DELETE\r\n              - OPTIONS\r\n      - httpApi:\r\n          path: /\r\n          method: ANY\r\n          cors: true # shorthand for defaults, but overrides above might take precedence\r\n\r\nplugins:\r\n  - serverless-python-requirements\r\n\r\ncustom:\r\n  pythonRequirements:\r\n    dockerizePip: false\r\n    layer: false\r\n    slim: true\r\n    strip: false\r\n    zip: true\r\n    fileName: requirements-lambda.txt\r\n    useDownloadCache: true\r\n    useStaticCache: true\r\n\r\npackage:\r\n  patterns:\r\n    - '!node_modules/**'\r\n    - '!.git/**'\r\n    - '!.venv/**'\r\n    - '!__pycache__/**'\r\n    - '!*.pyc'\r\n    - '!.pytest_cache/**'\r\n    - '!tests/**'\r\n    - 'main.py'\r\n    - 'database.py'\r\n    - 'risk_engine.py'\r\n    - '!ml_models/**'  # Exclude heavy ML models for now\r\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "orgId": "487c9d0a-3ea6-4096-b63c-824bb090257b",
+    "orgName": "sagexd",
+    "userId": "1yZkhdWH6Chs0HR8Gc",
+    "userName": "sagexd",
+    "serviceProviderAwsAccountId": "079900528022",
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}

@@ -200,6 +200,11 @@ def lambda_handler(event, context):
             }
     
     try:
+        # Determine HTTP Method (Support REST V1 and HTTP V2)
+        http_method = event.get('httpMethod')
+        if not http_method and 'requestContext' in event and 'http' in event['requestContext']:
+            http_method = event['requestContext']['http']['method']
+            
         # Parse request body
         if 'body' in event:
             body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
@@ -211,8 +216,18 @@ def lambda_handler(event, context):
         headers = {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
-            'Cache-Control': 'no-cache, no-store, must-revalidate'  # Ensure real-time responses
+            'Access-Control-Allow-Headers': 'Content-Type,x-user-id,Authorization,X-Api-Key',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
         }
+        
+        # Handle OPTIONS preflight request
+        if http_method == 'OPTIONS':
+             return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': ''
+            }
         
         if modality == 'text':
             text = body.get('text')

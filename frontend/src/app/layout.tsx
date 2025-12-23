@@ -35,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable} scroll-smooth`}>
-      <body className="antialiased min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900">
+    <html lang="en" className={`${inter.variable} ${outfit.variable} scroll-smooth`} suppressHydrationWarning>
+      <body className="antialiased min-h-screen bg-gray-50 text-gray-900 overflow-x-hidden selection:bg-blue-100 selection:text-blue-900" suppressHydrationWarning>
         {/* Subtle noise texture for film-like quality */}
         <div className="noise-overlay" />
         <Navbar />

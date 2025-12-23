@@ -25,6 +25,16 @@ class DatabaseService:
         """
         current_time = int(time.time())
         # The table uses user_id (Partition) and timestamp (Sort)
+        from decimal import Decimal
+        import json
+        
+        # Helper to convert float to Decimal
+        def to_decimal(obj):
+            if isinstance(obj, float): return Decimal(str(obj))
+            if isinstance(obj, dict): return {k: to_decimal(v) for k, v in obj.items()}
+            if isinstance(obj, list): return [to_decimal(v) for v in obj]
+            return obj
+
         item = {
             'user_id': f"ANON#{user_id}", # Distinct prefix for anonymous
             'timestamp': current_time, 
@@ -32,6 +42,7 @@ class DatabaseService:
             'date': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(current_time)),
             **data
         }
+        item = to_decimal(item)
         
         if self.mock:
             print(f"[DB MOCK] Putting Item: {item}")
@@ -60,4 +71,6 @@ class DatabaseService:
             print(f"Error fetching history: {e}")
             return []
 
-db = DatabaseService(mock=True)
+# Check if we should use real DB
+force_real = os.environ.get("FORCE_REAL_DB", "false").lower() == "true"
+db = DatabaseService(mock=not force_real)

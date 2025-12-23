@@ -1,17 +1,18 @@
 service: serene-mind-api
 
 frameworkVersion: '4'
+useDotenv: true
 
 provider:
   name: aws
-  runtime: python3.9
+  runtime: python3.10
   region: eu-north-1
   stage: prod
   memorySize: 512
   timeout: 30
   
   environment:
-    AWS_REGION: ${env:AWS_REGION}
+    AWS_REGION: ${self:provider.region}
     EMOTION_LOGS_TABLE: ${env:EMOTION_LOGS_TABLE}
     RISK_SUMMARY_TABLE: ${env:RISK_SUMMARY_TABLE}
     MODEL_BUCKET: ${env:MODEL_BUCKET}
@@ -46,9 +47,24 @@ functions:
       - httpApi:
           path: /{proxy+}
           method: ANY
+          cors:
+            allowedOrigins:
+              - '*'
+            allowedHeaders:
+              - Content-Type
+              - Authorization
+              - x-user-id
+              - X-Api-Key
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
       - httpApi:
           path: /
           method: ANY
+          cors: true # shorthand for defaults, but overrides above might take precedence
 
 plugins:
   - serverless-python-requirements

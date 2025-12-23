@@ -10,7 +10,7 @@ FUNCTION_NAME = "serene-mind-inference"
 REGION = os.environ.get("AWS_REGION", "eu-north-1")
 ROLE_NAME = "serene-mind-lambda-role"
 HANDLER = "lambda_function.lambda_handler"
-RUNTIME = "python3.9"
+RUNTIME = "python3.10"
 
 def create_deployment_package():
     """Create ZIP file with Lambda code"""

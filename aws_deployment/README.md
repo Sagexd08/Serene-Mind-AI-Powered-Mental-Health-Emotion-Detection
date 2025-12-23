@@ -53,9 +53,15 @@ To deploy this to AWS Lambda:
 
 To deploy the backend to the EC2 instance (`i-07c03748789f019d4`):
 
+**Automated:**
+```bash
+python aws_deployment/deploy_ec2.py
+```
+
+**Manual:**
 1. SSH into the instance:
    ```bash
-   ssh -i "path/to/serene-mind-ec2-key.pem" ec2-user@ec2-13-60-229-227.eu-north-1.compute.amazonaws.com
+   ssh -i "serene-mind-ec2-key.pem" ec2-user@ec2-13-60-229-227.eu-north-1.compute.amazonaws.com
    ```
 2. Clone the repository or copy the files.
 3. Install dependencies:
