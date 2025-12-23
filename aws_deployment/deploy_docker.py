@@ -3,11 +3,12 @@ import os
 import subprocess
 import time
 import base64
+import json
 
 # Configuration
 AWS_REGION = "eu-north-1"
 ECR_Repo_Name = "serenemind-backend"
-Lambda_Function_Name = "serenemind-backend-docker"
+Lambda_Function_Name = "serene-mind-inference"
 Account_ID = boto3.client("sts").get_caller_identity()["Account"]
 Image_URI = f"{Account_ID}.dkr.ecr.{AWS_REGION}.amazonaws.com/{ECR_Repo_Name}:latest"
 
@@ -19,6 +20,41 @@ def run_command(cmd, cwd=None):
         print(f"Error executing command: {e}")
         # Dont exit, try to proceed if possible or let user handle
         raise e
+
+def create_lambda_role(iam_client):
+    role_name = "SereneMindLambdaExecutionRole"
+    print(f"✨ Creating new IAM Role: {role_name}...")
+    
+    trust_policy = {
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        }]
+    }
+    
+    try:
+        role = iam_client.create_role(
+            RoleName=role_name,
+            AssumeRolePolicyDocument=json.dumps(trust_policy)
+        )
+        role_arn = role['Role']['Arn']
+        print(f"   Role created: {role_arn}")
+        
+        # Attach Policies
+        print("   Attaching policies...")
+        iam_client.attach_role_policy(RoleName=role_name, PolicyArn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole")
+        iam_client.attach_role_policy(RoleName=role_name, PolicyArn="arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess")
+        
+        # Wait for propagation
+        print("   Waiting for role propagation...")
+        time.sleep(10) 
+        return role_arn
+    except iam_client.exceptions.EntityAlreadyExistsException:
+        print(f"   Role {role_name} exists, fetching ARN...")
+        role = iam_client.get_role(RoleName=role_name)
+        return role['Role']['Arn']
 
 def deploy_docker():
     print(f"🚀 Starting Docker Deployment to AWS ECR & Lambda")
@@ -101,33 +137,33 @@ def deploy_docker():
         
     except lambda_client.exceptions.ResourceNotFoundException:
         print(f"✨ Creating NEW Lambda Function...")
-        # Create Role if not exists - assuming existing role for simplicity or prompt user
-        # Trying to find a role
+        
         iam = boto3.client('iam')
         role_arn = None
-        try:
-            role = iam.get_role(RoleName="service-role/serenemind-role-gz733hqv9") # Try to reuse existing if known
-            role_arn = role['Role']['Arn']
-        except:
-            # Fallback to listing roles
-            print("⚠️ Could not find exact role, using first available Lambda role...")
-            roles = iam.list_roles()
-            for r in roles['Roles']:
-                if 'lambda' in r['RoleName'].lower() and 'execution' in r['RoleName'].lower():
-                    role_arn = r['Arn']
-                    break
         
+        # 1. Try specific existing role
+        try:
+            role = iam.get_role(RoleName="SereneMindLambdaExecutionRole")
+            role_arn = role['Role']['Arn']
+            print(f"   Using existing role: {role_arn}")
+        except:
+            pass
+            
+        # 2. If not found, create it
         if not role_arn:
-            print("❌ No suitable IAM Role found. Please create a Lambda execution role manually.")
-            return
+            try:
+                role_arn = create_lambda_role(iam)
+            except Exception as e:
+                print(f"❌ Failed to create role: {e}")
+                return
 
         lambda_client.create_function(
             FunctionName=Lambda_Function_Name,
             PackageType='Image',
             Code={'ImageUri': Image_URI},
             Role=role_arn,
-            Timeout=300, # 5 mins for DL models
-            MemorySize=3008, # 3GB RAM for standard SOTA
+            Timeout=300, 
+            MemorySize=3008, 
             Environment={
                 'Variables': {
                     'FORCE_REAL_DB': 'true',

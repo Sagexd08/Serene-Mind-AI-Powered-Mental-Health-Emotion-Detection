@@ -1,12 +1,20 @@
-FROM public.ecr.aws/lambda/python:3.11
-
-# Install system dependencies (needed for librosa/soundfile/opencv)
-# libgl1 is for opencv, libsndfile1 for audio
-RUN yum install -y \
+FROM public.ecr.aws/lambda/python:3.10
+RUN yum update -y && \
+    yum install -y \
     libsndfile \
     mesa-libGL \
     git \
+    gcc \
+    gcc-c++ \
+    make \
+    cmake \
+    unzip \
+    tar \
+    gzip \
     && yum clean all
+
+# Upgrade pip
+RUN pip install --upgrade pip
 
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
 

@@ -251,11 +251,25 @@ class EmotionInference:
     def _predict_local_audio(self, audio_data: bytes):
         if 'audio_pipeline' not in self.models: return None
         try:
-            import librosa
+            import soundfile as sf
             import numpy as np
+            import scipy.signal
             
-            # Load audio using librosa (force 16kHz for Wav2Vec2)
-            y, sr = librosa.load(io.BytesIO(audio_data), sr=16000)
+            # Load audio using soundfile
+            # soundfile returns (data, samplerate)
+            # data can be (samples, channels)
+            y, sr = sf.read(io.BytesIO(audio_data))
+            
+            # Convert to mono if stereo
+            if len(y.shape) > 1:
+                y = np.mean(y, axis=1)
+            
+            # Resample to 16000 if needed
+            target_sr = 16000
+            if sr != target_sr:
+                number_of_samples = round(len(y) * float(target_sr) / sr)
+                y = scipy.signal.resample(y, number_of_samples)
+                sr = target_sr
             
             # Pipeline expects numpy array. Note: check if sampling rate needs to be passed explicitly?
             # Typically pipeline(y) works if it assumes 16k, or pipeline({"array": y, "sampling_rate": 16000})
@@ -523,7 +537,6 @@ async def calculate_risk(request: RiskScoreRequest, uid: str = Depends(get_user_
         "processing_time_ms": int((time.time() - start_time) * 1000)
     }
 
-# 5. Real-time WebSocket for Streaming Analysis
 @app.websocket("/ws/stream")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     """WebSocket endpoint for real-time emotion streaming"""
@@ -532,14 +545,11 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     try:
         uid = None
         while True:
-            # Receive data from client
             data = await websocket.receive_json()
             
-            # First message should contain auth token
             if not uid and 'auth' in data:
                 try:
-                    # Verify token and get user ID
-                    # uid = verify_token(data['auth'])
+            
                     uid = data.get('user_id', 'anonymous')
                 except:
                     await websocket.send_json({"error": "Authentication failed"})
@@ -609,3 +619,4 @@ def get_resources():
 # Lambda Handler
 from mangum import Mangum
 handler = Mangum(app)
+
